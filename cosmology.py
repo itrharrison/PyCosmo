@@ -17,8 +17,8 @@ from scipy import integrate
 from matplotlib import pyplot as plt
 
 from constants import *
-import hmf
-import powspec
+from hmf import *
+from powspec import *
 
 class Cosmology:
   
@@ -46,8 +46,8 @@ class Cosmology:
     self.H_0 = h0*100.e0
     self.n_s = ns
     
-    self.mf = hmf.Hmf()
-    self.pk = powspec.PowSpec()
+    self.mf = Hmf()
+    self.pk = PowSpec()
   
   def display(self):
     """
