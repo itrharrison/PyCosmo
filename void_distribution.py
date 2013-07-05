@@ -1,6 +1,6 @@
 """
-Python script for reproducing the distribution of
-number density of voids in Sheth & van de Weygaert 04
+Python script for reproducing the
+distribution of number density of voids
 """
 
 import numpy as np
@@ -9,51 +9,77 @@ import math
 from numpy import sqrt, log, exp, fabs, pi
 
 #from hmf import *
-#from cosmology import *
+from cosmology import *
 #from survey import *
+from powspec import PowSpec
+
+def void_and_cloud(void_barrier, collapse_barrier):
+  # Calculates D ; the void-and-cloud parameter
+  return fabs(void_barrier) / (collapse_barrier + fabs(void_barrier))
+  
+
+def multiplicity_function(nu,D,void_barrier,collapse_barrier):
+  """
+  calculates equation (4) in Sheth & van de Weygaert
+  approximating the infinite series in equation (1)
+  """
+  
+  return (1/nu) * (nu/(2*pi))**0.5 * exp(-0.5*nu) \
+  * exp((-1*fabs(void_barrier)*(D**2) \
+  / (collapse_barrier*nu*4)) - (2*(D**4)/(nu**2)))
+  
 
 def scaled_void_distribution(nu,void_barrier=-2.81,collapse_barrier=1.06):
+  """
+  'A Hierarchy of Voids : Sheth & van de Weygaert'
+  Reproduces a scaled distribution of void masses/sizes
+  shown in figure(7)  
+  """
   
   # D ; the void-and-cloud parameter
-  D = math.fabs(void_barrier) / (collapse_barrier + math.fabs(void_barrier))
+  D = void_and_cloud(void_barrier, collapse_barrier)
   
-  #print D
-  #print nu
-  
-  return (1/nu) * (nu/(2*math.pi))**0.5 * exp(-0.5*nu) \
-  * exp((-1*math.fabs(void_barrier)*(D**2) \
-  / (collapse_barrier*nu*4)) - (2*(D**4)/(nu**2)))
+  return multiplicity_function(nu,D,void_barrier,collapse_barrier)
   
 
 def void_radii_distribution(R,void_barrier=-2.81,collapse_barrier=1.06):
   
   """
-  Universe average density (from Peacock)
+  Universe mean density (from Peacock)
   1.8791 * pow(10,-26) Omega h^2 kg m^-3
   2.7755 * pow(10,11) Omega h^2 M(sol) Mpc^-3  
   """
-  rho = 2.7755 * pow(10,11)#1.8791 * pow(10,-26)
+  mean_density = 2.7755 * pow(10,11)#1.8791 * pow(10,-26)
+  
+  cosm = Cosmology()
+  ps = PowSpec()
+  
+  # taken from cosmology class in cosmology.py
+  #print cosm.rho_m(0)
+  # ^^^^ is this the correct mean density? different from the Peacock value...
   
   # D ; the void-and-cloud parameter
-  D = math.fabs(void_barrier) / (collapse_barrier + math.fabs(void_barrier))
+  D = void_and_cloud(void_barrier, collapse_barrier)
   
-  V = (4 * math.pi * pow(R,3) * pow(1.7,3)) / 3
+  # calculate volume from a given R
+  V = (4 * pi * pow(R,3) * pow(1.7,3)) / 3
   
-  #print V
+  # calculate mass of given volume element
+  M = V * mean_density / 1.7**3
   
-  fV = (1/V) * (V/(2*math.pi))**0.5 * exp(-0.5*V) \
-  * exp((-1*math.fabs(void_barrier)*(D**2) \
-  / (collapse_barrier*V*4)) - ((2*(D**4))/(V**2)))
+  # get sigma from PowSpec class
+  sigma = ps.sigma_wmap7fit(log(M))
   
-  #print fV
+  # calculate f(sigma)
+  fSig = multiplicity_function(sigma,D,void_barrier,collapse_barrier)
   
-  no_dens = (pow(1.7,6)*fV*9) / (4*math.pi*(R**4)*rho)
+  no_dens = (fSig) / (V) #(pow(1.7,6)*fV*9) / (4*math.pi*(R**4)*mean_density)
   
   return no_dens
   
 
 if __name__ == '__main__':
-  nu_range = np.arange(0.1,5,0.1)
+  nu_range = np.arange(0.1,20,0.05)
   
   nod = []
   
@@ -61,6 +87,10 @@ if __name__ == '__main__':
     nod.append(void_radii_distribution(R))
     
   plt.plot(nu_range,nod)
+  
+  plt.yscale('log')
+  plt.xscale('log')
+  
   
   """
   fnu1 = []
@@ -74,7 +104,10 @@ if __name__ == '__main__':
   
   plt.plot(nu_range,fnu1,nu_range,fnu2,nu_range,fnu3)
   plt.legend((r'$\delta_{c}=1.06$',r'$\delta_{c}=1.69$',r'$\delta_{c}=\infty$'), prop={'size':20})
-  plt.ylim(0,0.6)
+  plt.ylim(0.01,0.6)
+  #plt.xlim(0.5,5)
+  #plt.xscale('log')
+  #plt.yscale('log')
   plt.xlabel(r'$\nu = (\delta_{V} / \sigma)^{2}$', fontsize='20')
   plt.ylabel(r'$f(\nu)$', fontsize='20')
   """
