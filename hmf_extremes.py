@@ -5,7 +5,7 @@ C++ one.
 """
 
 import numpy as np
-from matplotlib import pyplot as pl
+from matplotlib import pyplot as plt
 from scipy import integrate
 
 from hmf import *
@@ -122,34 +122,34 @@ if __name__ == '__main__':
   wmap7_st.set_hmf(st)
   wmap7_st.display()  
   
-  pl.figure(1)
+  plt.figure(1)
   for fnl in fnl_range:
     phi_max, lnm_arr = evs_hypersurface_pdf(cosm=Cosmology(f_nl=fnl))
-    pl.loglog(exp(lnm_arr[:-1]), phi_max, label='$f_{NL} = %d$'%fnl)
-  pl.xlabel('Mass $[M_{\odot}h^{-1}]$')
-  pl.ylabel('$\phi(M_{max})$')
-  pl.ylim([1.e-4,3])
-  pl.legend(loc='best')
+    plt.loglog(exp(lnm_arr[:-1]), phi_max, label='$f_{NL} = %d$'%fnl)
+  plt.xlabel('Mass $[M_{\odot}h^{-1}]$')
+  plt.ylabel('$\phi(M_{max})$')
+  plt.ylim([1.e-4,3])
+  plt.legend(loc='best')
   
-  pl.figure(2)
+  plt.figure(2)
   for r in r_range:
     phi_max, lnm_arr = evs_hypersurface_pdf(r_box=r)
-    pl.loglog(exp(lnm_arr[:-1]), phi_max, label='$r = %d h^{-1}$ Mpc'%r)
-  pl.xlabel('Mass $[M_{\odot}h^{-1}]$')
-  pl.ylabel('$\phi(M_{max})$')
-  pl.ylim([1.e-4,3])
-  pl.legend(loc='best')
+    plt.loglog(exp(lnm_arr[:-1]), phi_max, label='$r = %d h^{-1}$ Mpc'%r)
+  plt.xlabel('Mass $[M_{\odot}h^{-1}]$')
+  plt.ylabel('$\phi(M_{max})$')
+  plt.ylim([1.e-4,3])
+  plt.legend(loc='best')
   
   """
-  pl.figure(3)  
+  plt.figure(3)  
   z_arr = linspace(0.e0, 2.e0, 100)
   phi_max_arr = zeros([100,200])
   for i in np.arange(1,len(z_arr)):
     phi_max_arr[i], lnm_arr = evs_bin_pdf(z_arr[i-1], z_arr[i])
     print(i)
     
-  pl.semilogx(exp(lnm_arr), phi_max_arr[0])
-  pl.xlabel('Mass $[M_{\odot}h^{-1}]$')
-  pl.ylabel('$\phi(M_{max})$')  
-  pl.show()
+  plt.semilogx(exp(lnm_arr), phi_max_arr[0])
+  plt.xlabel('Mass $[M_{\odot}h^{-1}]$')
+  plt.ylabel('$\phi(M_{max})$')  
+  plt.show()
   """
