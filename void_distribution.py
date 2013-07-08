@@ -42,21 +42,8 @@ def scaled_void_distribution(nu,void_barrier=-2.81,collapse_barrier=1.06):
   return multiplicity_function(nu,D,void_barrier,collapse_barrier)
   
 
-def void_radii_distribution(R,void_barrier=-2.81,collapse_barrier=1.06):
-  
-  """
-  Universe mean density (from Peacock)
-  1.8791 * pow(10,-26) Omega h^2 kg m^-3
-  2.7755 * pow(10,11) Omega h^2 M(sol) Mpc^-3  
-  """
-  mean_density = 2.7755 * pow(10,11)#1.8791 * pow(10,-26)
-  
-  cosm = Cosmology()
-  ps = PowSpec()
-  
-  # taken from cosmology class in cosmology.py
-  #print cosm.rho_m(0)
-  # ^^^^ is this the correct mean density? different from the Peacock value...
+def void_radii_distribution(R,void_barrier=-2.81,\
+collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   
   # D ; the void-and-cloud parameter
   D = void_and_cloud(void_barrier, collapse_barrier)
@@ -65,7 +52,7 @@ def void_radii_distribution(R,void_barrier=-2.81,collapse_barrier=1.06):
   V = (4 * pi * pow(R,3) * pow(1.7,3)) / 3
   
   # calculate mass of given volume element
-  M = V * mean_density / 1.7**3
+  M = V * cosm.rho_m() / 1.7**3
   
   # get sigma from PowSpec class
   sigma = ps.sigma_wmap7fit(log(M))
@@ -79,17 +66,26 @@ def void_radii_distribution(R,void_barrier=-2.81,collapse_barrier=1.06):
   
 
 if __name__ == '__main__':
+  
+  
+  
   nu_range = np.arange(0.1,20,0.05)
   
   nod = []
+  nod2 = []
   
   for R in nu_range:
-    nod.append(void_radii_distribution(R))
+    nod.append(void_radii_distribution(R,void_barrier=-2.7))
+    nod2.append(void_radii_distribution(R,collapse_barrier=1.686,void_barrier=-2.7))
     
-  plt.plot(nu_range,nod)
+  plt.plot(nu_range,nod,nu_range,nod2)
   
   plt.yscale('log')
   plt.xscale('log')
+  
+  plt.xlabel(r'r [Mpc/h]', fontsize='20')
+  plt.ylabel(r'dn/dlnr $(h/Mpc)^{3}$', fontsize='20')
+  plt.legend((r'$\delta_{c}=1.06$',r'$\delta_{c}=1.69$'), prop={'size':20})
   
   
   """
