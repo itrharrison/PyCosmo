@@ -42,7 +42,7 @@ def scaled_void_distribution(nu,void_barrier=-2.81,collapse_barrier=1.06):
   return multiplicity_function(nu,D,void_barrier,collapse_barrier)
   
 
-def void_radii_distribution(R,void_barrier=-2.81,\
+def void_radii_distribution(R,z=0.0,void_barrier=-2.81,\
 collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   
   # D ; the void-and-cloud parameter
@@ -52,10 +52,12 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   V = (4 * pi * pow(R,3) * pow(1.7,3)) / 3
   
   # calculate mass of given volume element
-  M = V * cosm.rho_m() / 1.7**3
+  M = V * cosm.rho_m(z) / 1.7**3
   
   # get sigma from PowSpec class
   sigma = ps.sigma_wmap7fit(log(M))
+  
+  print sigma
   
   # calculate f(sigma)
   fSig = multiplicity_function(sigma,D,void_barrier,collapse_barrier)
@@ -66,9 +68,6 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   
 
 if __name__ == '__main__':
-  
-  
-  
   nu_range = np.arange(0.1,20,0.05)
   
   nod = []
