@@ -40,11 +40,41 @@ def sigma_integral(logk,r,z=0.0,cosm=Cosmology()):
 
 def sigma_r(r,z=0.0):
   """ returns sigma, at arbitrary z"""
-  return numpy.sqrt(sigma_r_sq(r,z)) * growth_factor_D(z)
+  return sqrt(sigma_r_sq(r,z)) * growth_factor_D(z)
   
 
 if __name__ == "__main__":
   
+  sigmar = []
+  
+  rrange = numpy.arange(0,20,1)
+  
+  #for r in rrange:
+    #sigmar.append(sigma_r(5))
+  
+  print sigma_r(5)
+  
+"""
+  plt.plot(rrange,sigmar)
+  
+  #plt.yscale('linear')
+  #plt.xscale('linear')
+  plt.yscale('log')
+  plt.xscale('log')
+  
+  plt.show()
+"""
   
   
   
+  
+  
+  
+  
+  
+
+
+
+
+
+
