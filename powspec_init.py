@@ -7,12 +7,13 @@ produces a usable power spectrum from CAMB files or the Eisenstein & Hu analytic
 
 """
 
-# Cosmolopy package
-from cosmolopy.EH import power as power
-from cosmolopy import perturbation as pert
-from cosmolopy import constants as const
+
+
 
 from cosmology import * # IH cosmology class
+import constants as ct
+
+from EH import power as pow
 
 from numpy import sqrt, log, exp, fabs, pi
 from scipy import integrate
@@ -51,10 +52,7 @@ def growth_factor_D(z=0.0,cosm=Cosmology()):
   """call to cosmolopy perturbation.py script
   Calculates growth factor """
   
-  Theta = 2.728 / 2.7
-  #zeq = 2.50 * 10**4 * (cosm.O_m0+cosm.O_de0) * cosm.h_0**2 * Theta**-4
-  
-  return pert.fgrowth(z,cosm.O_m0)
+  return cosm.growth(z)
   
 
 def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
@@ -70,10 +68,10 @@ def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
   if not camb:
     Tk = transfer_function_EH(k)
   
-  Dz = growth_factor_D(z)
+  Dz = cosm.growth(z)
   
   # speed of light in Mpc s^-1
-  c_l = const.c_light_Mpc_s
+  c_l = ct.const["c"] / ct.convert["Mpc_m"]
   
   return (delta_h**2 * 2. * pi**2. * k**n) * (c_l/(cosm.h_0 * const.H100_s))**(3.+n) * (Tk*Dz)**2
   
@@ -84,7 +82,6 @@ if __name__ == "__main__":
   
   """
   Tk = transfer_function_EH(k)
-  Dz = growth_factor_D(z=3.0)
   Pk = power_spectrum_P(k)
   
   print "T(k) = %s" % Tk
@@ -107,7 +104,6 @@ if __name__ == "__main__":
   for k in krange:
     Pk.append(power_spectrum_P(k))
     #Tk.append(transfer_function_EH(k))
-    #Dz.append(growth_factor_D(z=k))
   
   
   #plt.plot(krange,Pk)

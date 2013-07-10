@@ -7,20 +7,23 @@ calculates various parameters of the cosmological power spectrum
 
 """
 
-# Cosmolopy package
-from cosmolopy.EH import power as power
-from cosmolopy import perturbation as pert
-from cosmolopy import constants as const
-
 from cosmology import * # IH cosmology class
 from powspec_init import * # CL power spectrum script
 
-from numpy import sqrt, log, exp, fabs, pi
+from numpy import sqrt, log, exp, fabs, pi, sin, cos
 from scipy import integrate
 import numpy
 
 from matplotlib import pyplot as plt
 
+def tophat_w(k, r):
+  """
+  Fourier transform of the real space tophat window function
+  (eq.8 from A.Zentner 06)
+  
+  """
+  
+  return (3.*(sin(k*r) - k*r*cos(k*r)))/((k*r)**3.)
 
 def sigma_r_sq(r,z=0.0,cosm=Cosmology()):
   """integrate the function in sigma_integral
@@ -35,12 +38,12 @@ def sigma_integral(logk,r,z=0.0,cosm=Cosmology()):
   
   k = exp(logk)
   
-  return (k**3 / (2 * pi**2)) * pert.w_tophat(k,r)**2 * power_spectrum_P(k)
+  return (k**3 / (2 * pi**2)) * tophat_w(k,r)**2 * power_spectrum_P(k)
   
 
 def sigma_r(r,z=0.0):
   """ returns sigma, at arbitrary z"""
-  return sqrt(sigma_r_sq(r,z)) * growth_factor_D(z)
+  return sqrt(sigma_r_sq(r,z)) * cosm.growth(z)
   
 
 if __name__ == "__main__":
