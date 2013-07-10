@@ -17,13 +17,23 @@ from cosmology import * # IH cosmology class
 from numpy import sqrt, log, exp, fabs, pi
 from scipy import integrate
 import numpy
+import itertools
 
 from matplotlib import pyplot as plt
 
 
-def import_transfer_function():
+def import_transfer_function(z=0.0):
   """import a transfer function from a CAMB produced output file"""
-  return NONE
+  
+  k_array = []
+  T_array = []
+  
+  for line in open('camb_03269385_matterpower_z%s.dat' % int(z),'r'):
+    a, b = line.split()
+    k_array.append(float(a))
+    T_array.append(float(b))
+  
+  return k_array, T_array
 
 def transfer_function_EH(k,z=0.0,cosm=Cosmology()):
   """Calculates transfer function given wavenumber"""
@@ -47,7 +57,7 @@ def growth_factor_D(z=0.0,cosm=Cosmology()):
   return pert.fgrowth(z,cosm.O_m0)
   
 
-def power_spectrum_P(k,z=0.0,cosm=Cosmology()):
+def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
   """ returns the power spectrum P(k)"""
   
   # WMAP7 parameters:
@@ -57,7 +67,9 @@ def power_spectrum_P(k,z=0.0,cosm=Cosmology()):
   
   delta_h = 1.94 * (10**-5) * cosm.O_m0**(-0.785 - (0.05*log(cosm.O_m0))) * exp(-0.95*(n-1)-0.169*(n-1)**2)
   
-  Tk = transfer_function_EH(k)
+  if not camb:
+    Tk = transfer_function_EH(k)
+  
   Dz = growth_factor_D(z)
   
   # speed of light in Mpc s^-1
@@ -84,15 +96,22 @@ if __name__ == "__main__":
   Tk = []
   Dz = []
   
+  k_array, T_array = import_transfer_function()
+  
+  #for k,T in itertools.izip(k_array,T_array):
+    #Pk.append(power_spectrum_P(k,camb=True,Tk=T))
+  
+  
   krange = numpy.logspace(-4,2,1000)
   
   for k in krange:
     Pk.append(power_spectrum_P(k))
-    Tk.append(transfer_function_EH(k))
-    Dz.append(growth_factor_D(z=k))
+    #Tk.append(transfer_function_EH(k))
+    #Dz.append(growth_factor_D(z=k))
   
   
-  plt.plot(krange,Pk)
+  #plt.plot(krange,Pk)
+  plt.plot(k_array,T_array,krange,Pk)
   
   #plt.yscale('linear')
   #plt.xscale('linear')
