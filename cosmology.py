@@ -55,7 +55,7 @@ class Cosmology:
     Displays what you're working with.
     """
     print("YOU ARE USING THE FOLLOWING COSMOLOGY:")
-    print("{h_0, O_m, O_de, w_0, O_b, O_r, O_k, f_nl} = ")
+    print("{h_0, O_m, O_de, w_0, O_b, O_r, O_k} = ")
     print("{{{}, {}, {}, {}, {}, {}, {}}}".format(self.h_0, self.O_m0, self.O_de0, self.w_0, self.O_b0, self.O_r0, self.O_k0))
     print("WITH MASS FUNCTION:")
     self.mf.display()
