@@ -1,6 +1,23 @@
 A (hopefully vaguely useful) python library for cosmology.
 
 Ian Harrison 2012-
+Christopher Lovell 2013-
+
+
+
+
+To use the Eisenstein & Hu fitting functions located in the EH/ directory
+you must first build the extensions and locate them in your current directory.
+
+Luckily this is all done within setup.py:
+
+      $ python setup.py build_ext --inplace
+
+You can then import the power and tf_fit modules:
+
+e.g.    import EH.power as power
+
+
 
 
 Example usage:

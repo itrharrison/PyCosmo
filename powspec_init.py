@@ -7,13 +7,10 @@ produces a usable power spectrum from CAMB files or the Eisenstein & Hu analytic
 
 """
 
-
-
-
 from cosmology import * # IH cosmology class
 import constants as ct
-
-from EH import power as pow
+import EH.power as power
+#import EH.tf_fit
 
 from numpy import sqrt, log, exp, fabs, pi
 from scipy import integrate
