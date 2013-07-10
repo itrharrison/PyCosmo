@@ -14,6 +14,9 @@ convert['yr_s'] = 3.155815e7    # year in seconds
 convert['msol_kg'] = 1.989e30   # solar mass in kg
 convert['pc_m'] = 3.0856e16     # parsec in metres
 convert['Mpc_m'] = 3.0856e22    # Mega parsec in metres
+convert['Mpc_km'] = 3.0856e19   # Mega Parsec in kilometres
+convert['H0'] = 3.2407793e-18   # Hubbles parameter (km /s /Mpc = /s)
+
 
 # ------------------------------------------------------------------------
 # constants of nature

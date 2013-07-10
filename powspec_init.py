@@ -10,7 +10,6 @@ produces a usable power spectrum from CAMB files or the Eisenstein & Hu analytic
 from cosmology import * # IH cosmology class
 import constants as ct
 import EH.power as power
-#import EH.tf_fit
 
 from numpy import sqrt, log, exp, fabs, pi
 from scipy import integrate
@@ -70,21 +69,10 @@ def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
   # speed of light in Mpc s^-1
   c_l = ct.const["c"] / ct.convert["Mpc_m"]
   
-  return (delta_h**2 * 2. * pi**2. * k**n) * (c_l/(cosm.h_0 * const.H100_s))**(3.+n) * (Tk*Dz)**2
+  return (delta_h**2 * 2. * pi**2. * k**n) * (c_l/(cosm.h_0 * ct.convert['H0']))**(3.+n) * (Tk*Dz)**2
   
 
 if __name__ == "__main__":
-  k = 0.238961
-  r = 10 #Mpc
-  
-  """
-  Tk = transfer_function_EH(k)
-  Pk = power_spectrum_P(k)
-  
-  print "T(k) = %s" % Tk
-  print "D(z) = %s" % Dz
-  print "P(k) = %s" % Pk
-  """
   
   Pk = []
   Tk = []
@@ -92,16 +80,11 @@ if __name__ == "__main__":
   
   k_array, T_array = import_transfer_function()
   
-  #for k,T in itertools.izip(k_array,T_array):
-    #Pk.append(power_spectrum_P(k,camb=True,Tk=T))
-  
   
   krange = numpy.logspace(-4,2,1000)
   
   for k in krange:
-    Pk.append(power_spectrum_P(k))
-    #Tk.append(transfer_function_EH(k))
-  
+    Pk.append(power_spectrum_P(k))  
   
   #plt.plot(krange,Pk)
   plt.plot(k_array,T_array,krange,Pk)
