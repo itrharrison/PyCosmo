@@ -55,9 +55,7 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   M = V * cosm.rho_m(z) / 1.7**3
   
   # get sigma from PowSpec class
-  sigma = ps.sigma_wmap7fit(log(M))
-  
-  print sigma
+  sigma = ps.sigma_r(R)
   
   # calculate f(sigma)
   fSig = multiplicity_function(sigma,D,void_barrier,collapse_barrier)
@@ -68,7 +66,7 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   
 
 if __name__ == '__main__':
-  nu_range = np.arange(0.1,20,0.05)
+  nu_range = np.arange(0.1,20,0.4)
   
   nod = []
   nod2 = []

@@ -7,7 +7,6 @@ produces a usable power spectrum from CAMB files or the Eisenstein & Hu analytic
 
 """
 
-from cosmology import * # IH cosmology class
 import constants as ct
 import EH.power as power
 
@@ -19,7 +18,7 @@ import itertools
 from matplotlib import pyplot as plt
 
 
-def import_transfer_function(z=0.0):
+def import_powerspectrum(z=0.0):
   """import a transfer function from a CAMB produced output file"""
   
   k_array = []
@@ -51,7 +50,7 @@ def growth_factor_D(z=0.0,cosm=Cosmology()):
   return cosm.growth(z)
   
 
-def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
+def power_spectrum_P(k,z=0.0,camb=False):
   """ returns the power spectrum P(k)"""
   
   # WMAP7 parameters:
@@ -61,13 +60,10 @@ def power_spectrum_P(k,z=0.0,cosm=Cosmology(),camb=False,Tk=0.0):
   
   delta_h = 1.94 * (10**-5) * cosm.O_m0**(-0.785 - (0.05*log(cosm.O_m0))) * exp(-0.95*(n-1)-0.169*(n-1)**2)
   
-  if not camb:
-    Tk = transfer_function_EH(k)
-  
+  Tk = transfer_function_EH(k)
   Dz = cosm.growth(z)
   
-  # speed of light in Mpc s^-1
-  c_l = ct.const["c"] / ct.convert["Mpc_m"]
+  c_l = ct.const["c"] / ct.convert["Mpc_m"]   # speed of light in Mpc s^-1
   
   return (delta_h**2 * 2. * pi**2. * k**n) * (c_l/(cosm.h_0 * ct.convert['H0']))**(3.+n) * (Tk*Dz)**2
   
@@ -78,7 +74,7 @@ if __name__ == "__main__":
   Tk = []
   Dz = []
   
-  k_array, T_array = import_transfer_function()
+  k_array, T_array = import_powerspectrum()
   
   
   krange = numpy.logspace(-4,2,1000)
