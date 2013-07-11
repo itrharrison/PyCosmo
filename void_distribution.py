@@ -24,7 +24,7 @@ def multiplicity_function(nu,D,void_barrier,collapse_barrier):
   approximating the infinite series in equation (1)
   """
   
-  return (1/nu) * (nu/(2*pi))**0.5 * exp(-0.5*nu) \
+  return  (nu/(2*pi))**0.5 * exp(-0.5*nu) \
   * exp((-1*fabs(void_barrier)*(D**2) \
   / (collapse_barrier*nu*4)) - (2*(D**4)/(nu**2)))
   
@@ -52,7 +52,7 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   V = (4 * pi * pow(R,3) * pow(1.7,3)) / 3
   
   # calculate mass of given volume element
-  M = V * cosm.rho_m(z) / 1.7**3
+  #M = V * cosm.rho_m(z) / 1.7**3
   
   # get sigma from PowSpec class
   sigma = ps.sigma_r(R)
@@ -66,7 +66,7 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   
 
 if __name__ == '__main__':
-  nu_range = np.arange(0.1,20,0.4)
+  nu_range = np.arange(0.1,20,0.1)
   
   nod = []
   nod2 = []
@@ -79,11 +79,14 @@ if __name__ == '__main__':
   
   plt.yscale('log')
   plt.xscale('log')
+  #plt.yscale('linear')
+  #plt.xscale('linear')  
   
   plt.xlabel(r'r [Mpc/h]', fontsize='20')
   plt.ylabel(r'dn/dlnr $(h/Mpc)^{3}$', fontsize='20')
   plt.legend((r'$\delta_{c}=1.06$',r'$\delta_{c}=1.69$'), prop={'size':20})
   
+  plt.show()
   
   """
   fnu1 = []
@@ -99,11 +102,11 @@ if __name__ == '__main__':
   plt.legend((r'$\delta_{c}=1.06$',r'$\delta_{c}=1.69$',r'$\delta_{c}=\infty$'), prop={'size':20})
   plt.ylim(0.01,0.6)
   #plt.xlim(0.5,5)
-  #plt.xscale('log')
-  #plt.yscale('log')
+  plt.xscale('log')
+  plt.yscale('log')
   plt.xlabel(r'$\nu = (\delta_{V} / \sigma)^{2}$', fontsize='20')
-  plt.ylabel(r'$f(\nu)$', fontsize='20')
-  """
+  plt.ylabel(r'$\nu f(\nu)$', fontsize='20')
   
   plt.show()
+  """
   

@@ -23,7 +23,7 @@ from matplotlib import pyplot as plt
 
 class PowSpec:
 
-  def __init__(self,Dz=0.76226768,h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458):
+  def __init__(self,Dz=0.76226768,h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458,ns=0.96):
     """Constructor
     Default (and currently only available option) to a polynomial fit to
     WMAP7+BAO+H0 ML  parameter power spectrum from CAMB.
@@ -37,6 +37,7 @@ class PowSpec:
     self.O_de0 = ode
     self.O_b0 = ob
     self.Dz = Dz
+    self.n_s = ns
     
     self.sigma = self.sigma_wmap7fit
     self.dlnsigmadlnm = self.dlnsigmadlnm_wmap7fit
@@ -58,7 +59,7 @@ class PowSpec:
     k_array = []
     P_array = []
     
-    for line in open('camb_{0}_matterpower_z{1}.dat'.format(ident,z),'r'):
+    for line in open('camb/camb_{0}_matterpower_z{1}.dat'.format(ident,z),'r'):
       a, b = line.split()
       k_array.append(float(a))
       P_array.append(float(b))
@@ -87,15 +88,13 @@ class PowSpec:
   def power_spectrum_P(self,k,z=0.0):
     """ returns the power spectrum P(k)"""
     
-    n = 0.966
-    
-    delta_h = 1.94 * (10**-5) * self.O_m0**(-0.785 - (0.05*log(self.O_m0))) * exp(-0.95*(n-1)-0.169*(n-1)**2)
+    delta_h = 1.94 * (10**-5) * self.O_m0**(-0.785 - (0.05*log(self.O_m0))) * exp(-0.95*(self.n_s-1)-0.169*(self.n_s-1)**2)
     
     Tk = self.transfer_function_EH(k)
     
     c_l = ct.const["c"] / ct.convert["Mpc_m"]   # speed of light in Mpc s^-1
     
-    return (delta_h**2 * 2. * pi**2. * k**n) * (c_l/(self.h_0 * ct.convert['H0']))**(3.+n) * (Tk*self.Dz)**2
+    return (delta_h**2 * 2. * pi**2. * k**self.n_s) * (c_l/(self.h_0 * ct.convert['H0']))**(3.+self.n_s) * (Tk*self.Dz)**2
     
   
   def tophat_w(self, k, r):
@@ -111,7 +110,7 @@ class PowSpec:
     """integrate the function in sigma_integral
     between the limits of k : 0 to inf. (log(k) : -20 to 20)"""
     
-    return integrate.quad(self.sigma_integral,-20,20,args=(r,z),limit=10000)
+    return integrate.quad(self.sigma_integral,0.,50.,args=(r,z),limit=10000)
     
   
   def sigma_integral(self,logk,r,z=0.0):
@@ -127,6 +126,10 @@ class PowSpec:
     """ returns sigma, for radius r at arbitrary z"""
     return sqrt(self.sigma_r_sq(r,z)) * self.Dz
     
+  
+  def dlnsigma_dlnm():
+    
+    return NONE
   
   def sigma_wmap7fit(self, lnm):
     """Root of matter variance smoothed with top hat window function on a scale
@@ -155,7 +158,7 @@ if __name__ == "__main__":
   Pnew = []
   knew = []
   
-  k_array, P_array = ps.import_powerspectrum(ident="03269385")
+  k_array, P_array = ps.import_powerspectrum(ident="36837468")
   
   # find limits of camb power spectrum
   maxk = max(k_array)
@@ -173,14 +176,14 @@ if __name__ == "__main__":
       knew.append(k)
   
   #plt.plot(krange,Pk)
-  #plt.plot(k_array,P_array,knew,Pnew,krange,Pk)
+  plt.plot(k_array,P_array,knew,Pnew,krange,Pk)
   
-  plt.yscale('linear')
-  plt.xscale('linear')
-  #plt.yscale('log')
-  #plt.xscale('log')
+  #plt.yscale('linear')
+  #plt.xscale('linear')
+  plt.yscale('log')
+  plt.xscale('log')
   
-  #plt.show()
+  plt.show()
   
   sigmar = []
   
@@ -189,9 +192,9 @@ if __name__ == "__main__":
   for r in rrange:
     sigmar.append(ps.sigma_r(r))
   
-  plt.plot(rrange,sigmar)
+  #plt.plot(rrange,sigmar)
   
-  plt.show()
+  #plt.show()
   """
   #plt.yscale('linear')
   #plt.xscale('linear')

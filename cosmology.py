@@ -48,7 +48,7 @@ class Cosmology:
     self.n_s = ns
     
     self.mf = hmf.Hmf(mf_type=hmf_type)
-    self.pk = powspec.PowSpec(self.growth(z=0.0),self.h_0,self.O_m0,self.O_de0,self.O_b0)
+    self.pk = powspec.PowSpec(self.growth(z=0.0),self.h_0,self.O_m0,self.O_de0,self.O_b0,self.n_s)
   
   def display(self):
     """
