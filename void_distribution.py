@@ -51,29 +51,31 @@ collapse_barrier=1.06,cosm=Cosmology(),ps=PowSpec()):
   # calculate volume from a given R
   V = (4 * pi * pow(R,3) * pow(1.7,3)) / 3
   
-  # calculate mass of given volume element
-  #M = V * cosm.rho_m(z) / 1.7**3
-  
   # get sigma from PowSpec class
   sigma = ps.sigma_r(R)
+  
+  # get dln(1/sigma) / dln(r) 
+  dlns_dlnr = ps.pr(R)
   
   # calculate f(sigma)
   fSig = multiplicity_function(sigma,D,void_barrier,collapse_barrier)
   
-  no_dens = (fSig) / (V) #(pow(1.7,6)*fV*9) / (4*math.pi*(R**4)*mean_density)
+  no_dens = (fSig * dlns_dlnr) / (V) #(pow(1.7,6)*fV*9) / (4*math.pi*(R**4)*mean_density)
   
   return no_dens
   
 
 if __name__ == '__main__':
+  ps = PowSpec()
+  
   nu_range = np.arange(0.1,20,0.1)
   
   nod = []
   nod2 = []
   
   for R in nu_range:
-    nod.append(void_radii_distribution(R,void_barrier=-2.7))
-    nod2.append(void_radii_distribution(R,collapse_barrier=1.686,void_barrier=-2.7))
+    nod.append(void_radii_distribution(R,void_barrier=-2.7,ps=ps))
+    nod2.append(void_radii_distribution(R,collapse_barrier=1.686,void_barrier=-2.7,ps=ps))
     
   plt.plot(nu_range,nod,nu_range,nod2)
   

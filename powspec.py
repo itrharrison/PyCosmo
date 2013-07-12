@@ -14,7 +14,6 @@ from numpy import sqrt, log, exp, fabs, pi, cos, sin
 from scipy import integrate
 from scipy import interpolate
 import numpy as np
-import sys
 
 import EH.power as power
 import constants as ct
@@ -38,6 +37,14 @@ class PowSpec:
     self.O_b0 = ob
     self.Dz = Dz
     self.n_s = ns
+    
+    # calculate fit to dln(1/sigma) / dln(r)
+    rrange = np.arange(0.1,20,0.1)
+    sigmar = []
+    for r in rrange:
+      sigmar.append(self.sigma_r(r))
+    
+    self.pr = self.dlnsigma_dlnr(sigmar,rrange)
     
     self.sigma = self.sigma_wmap7fit
     self.dlnsigmadlnm = self.dlnsigmadlnm_wmap7fit
@@ -103,15 +110,15 @@ class PowSpec:
     (eq.8 from A.Zentner 06)
     
     """
-    
     return (3.*(sin(k*r) - k*r*cos(k*r)))/((k*r)**3.)
   
   def sigma_r_sq(self, r,z=0.0):
     """integrate the function in sigma_integral
     between the limits of k : 0 to inf. (log(k) : -20 to 20)"""
     
-    return integrate.quad(self.sigma_integral,0.,50.,args=(r,z),limit=10000)
+    s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,50.,args=(r,z),limit=10000)
     
+    return s_r_sq, s_r_sq_error
   
   def sigma_integral(self,logk,r,z=0.0):
     """returns the integral required to calculate
@@ -124,12 +131,26 @@ class PowSpec:
   
   def sigma_r(self, r,z=0.0):
     """ returns sigma, for radius r at arbitrary z"""
-    return sqrt(self.sigma_r_sq(r,z)) * self.Dz
+    s_r_sq, s_r_sq_error = self.sigma_r_sq(r,z)
+    
+    return sqrt(s_r_sq) * self.Dz
     
   
-  def dlnsigma_dlnm():
+  def dlnsigma_dlnr(self,sigma_r,rrange):
+    """ slope of inverse root matter variance wrt log radius:
+        d(log(1/sigma)) / d(log(r))
+        
+        Polynomial fit to supplied cosmology.
+        Returns poly1d object """
     
-    return NONE
+    for i in range (len(sigma_r)):
+      sigma_r[i] = log(1/sigma_r[i])
+      rrange[i] = log(rrange[i])
+    
+    fit = np.polyfit(sigma_r,rrange,5)
+    p = np.poly1d(fit)
+    
+    return p
   
   def sigma_wmap7fit(self, lnm):
     """Root of matter variance smoothed with top hat window function on a scale
@@ -185,9 +206,10 @@ if __name__ == "__main__":
   
   plt.show()
   
+  """
   sigmar = []
   
-  rrange = np.arange(0,20,1)
+  rrange = np.arange(0.1,20,0.1)
   
   for r in rrange:
     sigmar.append(ps.sigma_r(r))
@@ -195,6 +217,7 @@ if __name__ == "__main__":
   #plt.plot(rrange,sigmar)
   
   #plt.show()
+  """
   """
   #plt.yscale('linear')
   #plt.xscale('linear')
