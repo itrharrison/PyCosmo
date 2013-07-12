@@ -17,8 +17,8 @@ from scipy import integrate
 from matplotlib import pyplot as plt
 
 from constants import *
-from hmf import *
-from powspec import *
+import hmf
+import powspec
 
 class Cosmology:
   
@@ -47,8 +47,8 @@ class Cosmology:
     self.H_0 = h0*100.e0
     self.n_s = ns
     
-    self.mf = Hmf(mf_type=hmf_type)
-    self.pk = PowSpec()
+    self.mf = hmf.Hmf(mf_type=hmf_type)
+    self.pk = powspec.PowSpec(self.growth(z=0.0),self.h_0,self.O_m0,self.O_de0,self.O_b0,self.n_s)
   
   def display(self):
     """
@@ -242,7 +242,7 @@ class Cosmology:
   
   def computeLittleNinZBin(self, lnm_min, lnm_max, z):
     """
-    Total number of haloes within a given mass bin at fixed redshift.
+    Total number of haloes within a given mass bin awmap7t fixed redshift.
     """
     return integrate.quad(self.dndlnm, lnm_min, lnm_max, args=(z))[0]
   
