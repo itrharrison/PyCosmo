@@ -15,14 +15,27 @@ from scipy import integrate
 from scipy import interpolate
 import numpy as np
 
+import utils as ut
 import EH.power as power
 import constants as ct
 
 from matplotlib import pyplot as plt
 
+"""
+global import_error
+import_error = None
+
+try:
+    import EH.power as power
+except ImportError as ie:
+    import_error = ie
+    pass
+    
+"""
+
 class PowSpec:
 
-  def __init__(self,Dz=0.76226768,h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458,ns=0.96):
+  def __init__(self,cosmology):#h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458,ns=0.96):
     """Constructor
     Default (and currently only available option) to a polynomial fit to
     WMAP7+BAO+H0 ML  parameter power spectrum from CAMB.
@@ -31,25 +44,32 @@ class PowSpec:
     analytic transfer function, a la cosmolopy.
     """
     
-    self.h_0 = h0
-    self.O_m0 = om
-    self.O_de0 = ode
-    self.O_b0 = ob
-    self.Dz = Dz
-    self.n_s = ns
+    self.cosm = cosmology
     
-    # calculate fit to dln(1/sigma) / dln(r)
-    rrange = np.arange(0.1,20,0.1)
-    sigmar = []
-    for r in rrange:
-      sigmar.append(self.sigma_r(r))
-    
-    self.pr = self.dlnsigma_dlnr(sigmar,rrange)
+    camb_choice = self.choose()
     
     self.sigma = self.sigma_wmap7fit
     self.dlnsigmadlnm = self.dlnsigmadlnm_wmap7fit
     self.label = "fitted to WMAP7->CAMB"
     self.clfile="wmap7_bao_h0_scalCls.dat"
+    #self.Dz = self.cosm.growth(z=0.0)
+    
+  
+  def choose(self):
+    print "Would you like to import a CAMB matter/power spectrum file? \n \
+    If not, an analytic spectrum using the prescription of \n \
+    Eisenstein & Hu (1999,511) will be used. \n \n \
+    If using a CAMB file ensure the cosmological \n \
+    parameters used to generate the spectrum are \n \
+    identical to those specified within the \n \
+    cosmology class. \n \n \
+    If CAMB, enter 'True', else EH \n"
+    
+    s = raw_input(":")
+    
+    if s == "True":
+      return True
+    return False  
     
   
   def display(self):
@@ -58,8 +78,23 @@ class PowSpec:
     print("Power spectrum {}".format(self.label))
     
   
+  def vd_initialisation(self,z,rrange):
+    
+    self.growth_func(z)
+    self.sigma_r(rrange,z)
+    self.dlnsigma_dlnr(rrange,self.sigmar)
+    
+    return None
+    
+  
+  def growth_func(self,z):
+    """ initialises growth function variable
+        as part of PowSpec instance """
+    self.Dz = self.cosm.growth(z)
+    return self.Dz
+  
   def import_powerspectrum(self,ident,z=0.0):
-    """import a transfer function from a CAMB produced output file"""
+    """import power spectrum function from a CAMB produced output file"""
     
     z=str(int(z))
     
@@ -73,84 +108,113 @@ class PowSpec:
     
     return k_array, P_array
     
-  def interpolate_camb(self,k_array,P_array):
+  def interpolate(self,array_1,array_2):
     """ returns a function that uses interpolation to find 
         the value of new points """
     
-    return interpolate.interp1d(k_array,P_array)
+    return interpolate.interp1d(array_1,array_2)
     
   
-  def transfer_function_EH(self,k,z=0.0):
+  def transfer_function_EH(self,k,z):
     """Calculates transfer function given wavenumber"""
     
+    """
+    if import_error:
+      raise ImportError, "EH power module import failed. Please check the README for details on setup."
+    """
+    
     # set cosmology
-    power.TFmdm_set_cosm(self.O_m0,self.O_b0,-1,0,self.O_de0,self.h_0,z)
+    power.TFmdm_set_cosm(self.cosm.O_m0,self.cosm.O_b0,\
+                        0.0,0,self.cosm.O_de0,self.cosm.h_0,z)
     
     """Call to EH power.c script
        h Mpc^-1 OR Mpc^-1 ???? """
     #return power.TFmdm_onek_mpc(k)
-    return power.TFmdm_onek_mpc(k)
+    return power.TFmdm_onek_hmpc(k)
     
   
-  def power_spectrum_P(self,k,z=0.0):
+  def power_spectrum_P(self,k,z):
     """ returns the power spectrum P(k)"""
     
-    delta_h = 1.94 * (10**-5) * self.O_m0**(-0.785 - (0.05*log(self.O_m0))) * exp(-0.95*(self.n_s-1)-0.169*(self.n_s-1)**2)
+    delta_h = 1.94 * (10**-5) * self.cosm.O_m0**(-0.785 - (0.05*log(self.cosm.O_m0))) \
+               * exp(-0.95*(self.cosm.n_s-1)-0.169*(self.cosm.n_s-1)**2)
     
-    Tk = self.transfer_function_EH(k)
+    Tk = self.transfer_function_EH(k,z)
     
     c_l = ct.const["c"] / ct.convert["Mpc_m"]   # speed of light in Mpc s^-1
     
-    return (delta_h**2 * 2. * pi**2. * k**self.n_s) * (c_l/(self.h_0 * ct.convert['H0']))**(3.+self.n_s) * (Tk*self.Dz)**2
+    return (delta_h**2 * 2. * pi**2. * k**self.cosm.n_s) * \
+           (c_l/(self.cosm.h_0 * ct.convert['H0']))**(3.+self.cosm.n_s) * (Tk*self.Dz)**2
     
   
-  def tophat_w(self, k, r):
+  def sigma_r(self,r,z):
+    """ returns root of the matter variance, smoothed with a 
+    top hat window function at a radius r, for arbitrary redshift. 
     """
-    Fourier transform of the real space tophat window function
-    (eq.8 from A.Zentner 06)
     
-    """
-    return (3.*(sin(k*r) - k*r*cos(k*r)))/((k*r)**3.)
+    if np.isscalar(r):
+      s_r_sq, s_r_sq_error = self.sigma_r_sq(r,z)
+      self.sigmar = sqrt(s_r_sq) * self.Dz
+    else:
+      s_r_sq, s_r_sq_error = self.sigma_r_sq_vec(self,r,z)
+      self.sigmar = sqrt(s_r_sq) * self.Dz
+      self.sigmar.tolist()
+      
+    return self.sigmar
+    
   
-  def sigma_r_sq(self, r,z=0.0):
+  def sigma_r_sq(self,r,z):
     """integrate the function in sigma_integral
-    between the limits of k : 0 to inf. (log(k) : -20 to 20)"""
+    between the limits of k : 0 to inf. """
     
-    s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,50.,args=(r,z),limit=10000)
+    s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,35.,args=(r,z),limit=10000)
     
     return s_r_sq, s_r_sq_error
   
-  def sigma_integral(self,logk,r,z=0.0):
+  sigma_r_sq_vec = np.vectorize(sigma_r_sq)    #vectorize sigma-squared function
+  
+  def sigma_integral(self,logk,r,z):
     """returns the integral required to calculate
-       sigma squared (Coles & Lucchin pg.266) """
+       sigma squared (Coles & Lucchin pg.266, A.Zentner 06 eq.14)"""
     
-    k = exp(logk)
+    #k = exp(logk)
+    k = logk
     
-    return (k**3 / (2 * pi**2)) * self.tophat_w(k,r)**2 * self.power_spectrum_P(k)
+    return (k**3 / (2 * pi**2)) * fabs(self.tophat_w(k,r))**2 * self.power_spectrum_P(k,z)
+    
+  def tophat_w(self, k, r):
+    """
+    Fourier transform of the real space tophat window function
+    (eq.9 from A.Zentner 06)
+    
+    """
+    return (3.*(sin(k*r) - k*r*cos(k*r)))/((k*r)**3.)
     
   
-  def sigma_r(self, r,z=0.0):
-    """ returns sigma, for radius r at arbitrary z"""
-    s_r_sq, s_r_sq_error = self.sigma_r_sq(r,z)
-    
-    return sqrt(s_r_sq) * self.Dz
-    
-  
-  def dlnsigma_dlnr(self,sigma_r,rrange):
+  def dlnsigma_dlnr(self,rrange,sigma_r):
     """ slope of inverse root matter variance wrt log radius:
         d(log(1/sigma)) / d(log(r))
         
         Polynomial fit to supplied cosmology.
         Returns poly1d object """
     
-    for i in range (len(sigma_r)):
-      sigma_r[i] = log(1/sigma_r[i])
-      rrange[i] = log(rrange[i])
+    inv_sigma = []
+    log_radius = []
     
-    fit = np.polyfit(sigma_r,rrange,5)
-    p = np.poly1d(fit)
+    for i in range (len(rrange)):
+      inv_sigma.append(log(sigma_r[i]))
+      log_radius.append(log(rrange[i]))
     
-    return p
+    fit = np.polyfit(log_radius,inv_sigma,10)
+    self.p = np.poly1d(fit)
+    self.p_der = np.polyder(self.p)
+    
+    #plt.loglog(rrange,sigma_r,log_radius,inv_sigma,log_radius,self.p(log_radius))
+    #plt.legend(["3","1","2"])
+    #plt.show()
+    
+    return self.p_der
+  
   
   def sigma_wmap7fit(self, lnm):
     """Root of matter variance smoothed with top hat window function on a scale
@@ -172,12 +236,17 @@ class PowSpec:
     return -1.47523 + 0.0770898*lnm - 0.0000450156*pow(lnm,3) + (8.23139e-9)*pow(lnm,5)
 
 if __name__ == "__main__":
+  from cosmology import Cosmology
   
-  ps = PowSpec()
+  cosm = Cosmology()
+  ps = PowSpec(cosm)
+  
   
   Pk = []
   Pnew = []
   knew = []
+  
+  ps.growth_func(0.0)
   
   k_array, P_array = ps.import_powerspectrum(ident="36837468")
   
@@ -185,13 +254,13 @@ if __name__ == "__main__":
   maxk = max(k_array)
   mink = min(k_array)
   
-  # return interpolation function
-  fint = ps.interpolate_camb(k_array,P_array)
+  # return interpolated function
+  fint = ps.interpolate(k_array,P_array)
   
   krange = np.logspace(-4,2,1000)
   
   for k in krange:
-    Pk.append(ps.power_spectrum_P(k))
+    Pk.append(ps.power_spectrum_P(k,0.0))
     if k > mink and k < maxk:
       Pnew.append(fint(k))
       knew.append(k)
