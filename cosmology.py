@@ -48,7 +48,7 @@ class Cosmology:
     self.n_s = ns
     
     self.mf = hmf.Hmf(mf_type=hmf_type)
-    self.pk = powspec.PowSpec(self.growth(z=0.0),self.h_0,self.O_m0,self.O_de0,self.O_b0,self.n_s)
+    self.pk = powspec.PowSpec(self)#self.h_0,self.O_m0,self.O_de0,self.O_b0,self.n_s)
   
   def display(self):
     """
@@ -216,6 +216,7 @@ class Cosmology:
     else:
       Dplus = self._integ_growth_vector(self, z)
     return Dplus
+    
   
   def dndlnm(self, lnm, z):
     """
@@ -230,7 +231,7 @@ class Cosmology:
             fabs(log(D_z/D_0) + dlnsdlnm) *
             self.rho_m(z) / (exp(lnm)) *
             self.mf.r_ng(s*D_z/D_0, self.delta_c, self.fnl))
-            
+    
   def computeNinBin(self, z_min, z_max, lnm_min, lnm_max):
     """
     Total number of dark matter haloes expected within a given mass,
@@ -242,7 +243,7 @@ class Cosmology:
   
   def computeLittleNinZBin(self, lnm_min, lnm_max, z):
     """
-    Total number of haloes within a given mass bin awmap7t fixed redshift.
+    Total number of haloes within a given mass bin at fixed redshift.
     """
     return integrate.quad(self.dndlnm, lnm_min, lnm_max, args=(z))[0]
   
@@ -260,7 +261,8 @@ class Cosmology:
     Product of dndlnm * dVdz
     """
     return self.dndlnm(lnm, 0.e0)*self.dvdz(z)
-    
+  
+
 if __name__ == '__main__':
 
   wmap7 = Cosmology()
@@ -268,4 +270,4 @@ if __name__ == '__main__':
   lnm_arr = np.linspace(log(1.e13), log(1.e18), 100)
   
   plt.loglog(exp(lnm_arr), wmap7.dndlnm(lnm_arr, 0.e0))
-  plt.show()
+  #plt.show()
