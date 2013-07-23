@@ -79,9 +79,9 @@ class PowSpec:
     
   
   def vd_initialisation(self,z,rrange):
-    
     self.growth_func(z)
     self.sigma_r(rrange,z)
+    self.sigma_fit(rrange,self.sigmar)
     self.dlnsigma_dlnr(rrange,self.sigmar)
     
     return None
@@ -147,9 +147,15 @@ class PowSpec:
            (c_l/(self.cosm.h_0 * ct.convert['H0']))**(3.+self.cosm.n_s) * (Tk*self.Dz)**2
     
   
+  def sigma_fit(self,rrange,sigma_r):
+    fit = np.polyfit(log(rrange),sigma_r,6)
+    self.sig_fit = np.poly1d(fit)
+    
+    return self.sig_fit
+  
   def sigma_r(self,r,z):
     """ returns root of the matter variance, smoothed with a 
-    top hat window function at a radius r, for arbitrary redshift. 
+    top hat window function at a radius r
     """
     
     if np.isscalar(r):
@@ -158,29 +164,25 @@ class PowSpec:
     else:
       s_r_sq, s_r_sq_error = self.sigma_r_sq_vec(self,r,z)
       self.sigmar = sqrt(s_r_sq) * self.Dz
-      self.sigmar.tolist()
       
+    self.sigmar.tolist()
     return self.sigmar
-    
   
   def sigma_r_sq(self,r,z):
     """integrate the function in sigma_integral
     between the limits of k : 0 to inf. """
     
-    s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,35.,args=(r,z),limit=10000)
+    s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,np.inf,args=(r,z))#,limit=10000)
     
     return s_r_sq, s_r_sq_error
   
   sigma_r_sq_vec = np.vectorize(sigma_r_sq)    #vectorize sigma-squared function
   
-  def sigma_integral(self,logk,r,z):
+  def sigma_integral(self,k,r,z):
     """returns the integral required to calculate
        sigma squared (Coles & Lucchin pg.266, A.Zentner 06 eq.14)"""
     
-    #k = exp(logk)
-    k = logk
-    
-    return (k**3 / (2 * pi**2)) * fabs(self.tophat_w(k,r))**2 * self.power_spectrum_P(k,z)
+    return (k**2 / (2 * pi**2)) * fabs(self.tophat_w(k,r)) * self.power_spectrum_P(k,z)
     
   def tophat_w(self, k, r):
     """
@@ -192,22 +194,16 @@ class PowSpec:
     
   
   def dlnsigma_dlnr(self,rrange,sigma_r):
-    """ slope of inverse root matter variance wrt log radius:
-        d(log(1/sigma)) / d(log(r))
-        
-        Polynomial fit to supplied cosmology.
-        Returns poly1d object """
+    """ 
+    slope of inverse root matter variance wrt log radius:
+    d(log(1/sigma)) / d(log(r))
     
-    inv_sigma = []
-    log_radius = []
+    Polynomial fit to supplied cosmology.
+    Returns poly1d object
+    """
     
-    for i in range (len(rrange)):
-      inv_sigma.append(log(sigma_r[i]))
-      log_radius.append(log(rrange[i]))
-    
-    fit = np.polyfit(log_radius,inv_sigma,10)
-    self.p = np.poly1d(fit)
-    self.p_der = np.polyder(self.p)
+    fit = np.polyfit(log(rrange),log(sigma_r),6)
+    self.p_der = np.polyder(np.poly1d(fit))
     
     #plt.loglog(rrange,sigma_r,log_radius,inv_sigma,log_radius,self.p(log_radius))
     #plt.legend(["3","1","2"])
@@ -217,7 +213,8 @@ class PowSpec:
   
   
   def sigma_wmap7fit(self, lnm):
-    """Root of matter variance smoothed with top hat window function on a scale
+    """
+    Root of matter variance smoothed with top hat window function on a scale
     specified by log(m)
     
     Polynomial fit to calculation from a CAMB power spectrum
@@ -227,7 +224,8 @@ class PowSpec:
     
   
   def dlnsigmadlnm_wmap7fit(self, lnm):
-    """Slope of root matter variance wrt log mass:
+    """
+    Slope of root matter variance wrt log mass:
     d(log(sigma)) / d(log(m))
   
     Polynomial fit to calculation from a CAMB power spectrum 
