@@ -78,7 +78,6 @@ def void_radii_dist(r,ps,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   Produces the differential number density of voids 
   wrt to their characteristic radius
   """
-  
   # account for expansion factor (eq.12, Jennings,Li & Hu)
   r = (r / 1.7)
   
@@ -92,7 +91,7 @@ def void_radii_dist(r,ps,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   sigma = ps.sig_fit(log(r*1.7))
   
   # get dln(1/sigma) / dln(r) 
-  dlns_dlnr = fabs(ps.p_der(log(r)))
+  dlns_dlnr = fabs(ps.dlnsigmadlnr(log(r)))
   
   # calculate f(sigma)
   if(np.isscalar(sigma)):
@@ -110,33 +109,78 @@ def void_radii_dist(r,ps,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   return no_dens
   
 
+def void_mass_dist(m,ps,cosm,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
+  """
+  produces the differential number density of voids
+  wrt their characteristic mass
+  """
+  # D ; the void-and-cloud parameter
+  D = void_and_cloud(void_barrier, collapse_barrier)
+  
+  # Average density of the universe
+  rho = cosm.rho_m(z)
+  
+  # convert mass -> radius,use to get sigma from PowSpec class fit
+  r = ( ((3*m)/(4*pi*rho))**(0.3333333333333333333) ) / 1.7
+  sigma = ps.sig_fit(log(r*1.7))
+  
+  # get dln(1/sigma) / dln(m) 
+  dlns_dlnm = fabs(ps.dlnsigmadlnm(log(m)))
+  
+  # calculate f(sigma)
+  if(np.isscalar(sigma)):
+    fSig = multiplicity_function_jlh(sigma,D,void_barrier,collapse_barrier)
+  else:
+    fSig = multiplicity_function_jlh_vec(sigma,D,void_barrier,collapse_barrier)
+  
+  no_dens = ((fSig*rho)/m) * dlns_dlnm
+  
+  plt.loglog(m,fSig,m,dlns_dlnm)
+  plt.legend(["fSig","dlns_dlnm"])
+  plt.show()
+  raw_input()
+  
+  return no_dens
+
 
 def void_fr(norm,r,ps):
-  """
-  f(m) from Harrison & Coles (2012)
-  - pdf of the original void distribution
-  """
+  """ f(r) from Harrison & Coles (2012)
+      pdf of the original void distribution """
+  
   num = void_radii_dist(r,ps)
   return (1/norm)*num*(1/r)
   
 
-def void_Fr(norm,r,ps):
-  """
-  F(m) from Harrison & Coles (2012)
-  - known distribution of void radii
-  """
-  integ = integrate.quad(void_radii_dist,0.,r,args=(ps))
+def void_Fr(norm,r,ps,max_record=True):
+  """ F(r) from Harrison & Coles (2012)
+      known distribution of void radii 
+      
+      for max_record=True, calculates the cumulative 
+      distribution *upto* a given radii, otherwise
+      calculates EVS for small radii """
+  
+  if max_record:
+    integ = integrate.quad(void_radii_dist,0.,r,args=(ps))
+  else:
+    integ = integrate.quad(void_radii_dist,r,np.inf,args=(ps))
+  
   return (1/norm)*integ[0]
   
 
-def void_pdf(r,norm,ps,V):
-  """
-  phi(max) from Harrison & Coles (2012)
-  - exact extreme value pdf of 
-  the original void distribution
-  """
+def void_Fr_small(norm,r,ps):
+  """ F(r) from Harrison & Coles (2012)
+      known distribution of void radii """
+  
+  integ = integrate.quad(void_radii_dist,0.,r,args=(ps))
+  return (1/norm)*integ[0]
+
+def void_pdf(r,norm,ps,V,max_record=True):
+  """ phi(max) from Harrison & Coles (2012)
+      exact extreme value pdf of the original
+      void distribution for a given radius """
+  
   fr = void_fr(norm,r,ps)
-  Fr = void_Fr(norm,r,ps)
+  Fr = void_Fr(norm,r,ps,max_record)
   N = norm * V
   
   print fr, Fr, N
@@ -145,42 +189,48 @@ def void_pdf(r,norm,ps,V):
   
 
 def void_norm(ps):
-   """
-  n_tot from Harrison & Coles (2012)
+  """ n_tot from Harrison & Coles (2012)
+      normalisation factor; gives the 
+      total comoving number density of voids """
   
-  - normalisation factor; gives the 
-  total comoving number density of voids
-  """
   return integrate.quad(void_radii_dist,0.,np.inf,args=(ps))
   
 
 
 if __name__ == '__main__':
-  
+  # initialise radius and mass lists
   radius = np.logspace(-1,1.7,400)
+  mass = np.logspace(8,17,700)
   radius.tolist()
+  mass.tolist()
   
+  # initialise cosmology and PowSpec void parameters
   cosm = Cosmology()
-  #cosm.pk.growth_func(0.0)
-  cosm.pk.vd_initialisation(0.0,radius)
+  cosm.pk.vd_initialisation(0.0,radius,mass)
   
-  num = void_radii_dist(radius,cosm.pk)
-  #num2 = void_radii_dist(radius,cosm.pk.sigmar,cosm.pk,collapse_barrier=1.686)
+  # calculate the number density of voids wrt radius
+  no_radius = void_radii_dist(radius,cosm.pk)
+  #no_radius2 = void_radii_dist(radius,cosm.pk.sigmar,cosm.pk,collapse_barrier=1.686)
   
-  plt.loglog(radius,num)
+  # calculate the number density of voids wrt mass
+  no_mass = void_mass_dist(mass,cosm.pk,cosm)
+  
+  plt.loglog(mass,no_mass)
   plt.show()
   raw_input()
   
-  pdf = []
+  pdf_large = []
+  pdf_small = []
   norm = void_norm(cosm.pk)
   
   for r in radius:
     print r
-    pdf.append(void_pdf(r,norm[0],cosm.pk,1000.))
+    pdf_large.append(void_pdf(r,norm[0],cosm.pk,1000.))
+    pdf_small.append(void_pdf(r,norm[0],cosm.pk,1000.,max_record=False))
   
   plt.xlim([3e-1,3e1])
   plt.ylim([1e-7,1e-0])
-  plt.loglog(radius,pdf)
+  plt.loglog(radius,pdf_large,radius,pdf_small)
   plt.show()
 
   """
