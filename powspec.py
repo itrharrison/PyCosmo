@@ -21,28 +21,13 @@ import constants as ct
 
 from matplotlib import pyplot as plt
 
-"""
-global import_error
-import_error = None
-
-try:
-    import EH.power as power
-except ImportError as ie:
-    import_error = ie
-    pass
-    
-"""
 
 class PowSpec:
 
   def __init__(self,cosmology):#h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458,ns=0.96):
     """Constructor
     Default (and currently only available option) to a polynomial fit to
-    WMAP7+BAO+H0 ML  parameter power spectrum from CAMB.
-    
-    FIXME: long-term goal is to hook this up to Eisenstein & Hu's
-    analytic transfer function, a la cosmolopy.
-    """
+    WMAP7+BAO+H0 ML  parameter power spectrum from CAMB. """
     
     self.cosm = cosmology
     
@@ -56,14 +41,14 @@ class PowSpec:
     
   
   def choose(self):
-    print "Would you like to import a CAMB matter/power spectrum file? \n \
-    If not, an analytic spectrum using the prescription of \n \
-    Eisenstein & Hu (1999,511) will be used. \n \n \
-    If using a CAMB file ensure the cosmological \n \
-    parameters used to generate the spectrum are \n \
-    identical to those specified within the \n \
-    cosmology class. \n \n \
-    If CAMB, enter 'True', else EH \n"
+    print " Would you like to import a CAMB matter/power spectrum file? \n \
+            If not, an analytic spectrum using the prescription of \n \
+            Eisenstein & Hu (1999,511) will be used. \n \n \
+            If using a CAMB file ensure the cosmological \n \
+            parameters used to generate the spectrum are \n \
+            identical to those specified within the \n \
+            cosmology class. \n \n \
+            If CAMB, enter 'True', else EH \n"
     
     s = raw_input(":")
     
@@ -78,11 +63,15 @@ class PowSpec:
     print("Power spectrum {}".format(self.label))
     
   
-  def vd_initialisation(self,z,rrange):
+  def vd_initialisation(self,z,rrange,mrange):
+    """ initialise parameters required for 
+        void_distribution.py script """
+    
     self.growth_func(z)
     self.sigma_r(rrange,z)
     self.sigma_fit(rrange,self.sigmar)
-    self.dlnsigma_dlnr(rrange,self.sigmar)
+    self.dlnsigma_dlnr(rrange,z)
+    self.dlnsigma_dlnm(mrange,z)
     
     return None
     
@@ -90,11 +79,13 @@ class PowSpec:
   def growth_func(self,z):
     """ initialises growth function variable
         as part of PowSpec instance """
+    
     self.Dz = self.cosm.growth(z)
     return self.Dz
   
   def import_powerspectrum(self,ident,z=0.0):
-    """import power spectrum function from a CAMB produced output file"""
+    """ import power spectrum function from
+        a CAMB produced output file """
     
     z=str(int(z))
     
@@ -109,19 +100,14 @@ class PowSpec:
     return k_array, P_array
     
   def interpolate(self,array_1,array_2):
-    """ returns a function that uses interpolation to find 
-        the value of new points """
+    """ returns a function that uses interpolation
+        to find the value of new points """
     
     return interpolate.interp1d(array_1,array_2)
     
   
   def transfer_function_EH(self,k,z):
     """Calculates transfer function given wavenumber"""
-    
-    """
-    if import_error:
-      raise ImportError, "EH power module import failed. Please check the README for details on setup."
-    """
     
     # set cosmology
     power.TFmdm_set_cosm(self.cosm.O_m0,self.cosm.O_b0,\
@@ -154,9 +140,8 @@ class PowSpec:
     return self.sig_fit
   
   def sigma_r(self,r,z):
-    """ returns root of the matter variance, smoothed with a 
-    top hat window function at a radius r
-    """
+    """ returns root of the matter variance, smoothed 
+        with a top hat window function at a radius r """
     
     if np.isscalar(r):
       s_r_sq, s_r_sq_error = self.sigma_r_sq(r,z)
@@ -169,8 +154,8 @@ class PowSpec:
     return self.sigmar
   
   def sigma_r_sq(self,r,z):
-    """integrate the function in sigma_integral
-    between the limits of k : 0 to inf. """
+    """ integrate the function in sigma_integral
+        between the limits of k : 0 to inf. """
     
     s_r_sq, s_r_sq_error = integrate.quad(self.sigma_integral,0.,np.inf,args=(r,z))#,limit=10000)
     
@@ -179,37 +164,50 @@ class PowSpec:
   sigma_r_sq_vec = np.vectorize(sigma_r_sq)    #vectorize sigma-squared function
   
   def sigma_integral(self,k,r,z):
-    """returns the integral required to calculate
-       sigma squared (Coles & Lucchin pg.266, A.Zentner 06 eq.14)"""
+    """ returns the integral required to calculate sigma
+        squared (Coles & Lucchin pg.266, A.Zentner 06 eq.14)"""
     
     return (k**2 / (2 * pi**2)) * fabs(self.tophat_w(k,r)) * self.power_spectrum_P(k,z)
     
   def tophat_w(self, k, r):
-    """
-    Fourier transform of the real space tophat window function
-    (eq.9 from A.Zentner 06)
+    """ Fourier transform of the real space tophat 
+        window function (eq.9 from A.Zentner 06) """
     
-    """
     return (3.*(sin(k*r) - k*r*cos(k*r)))/((k*r)**3.)
     
   
-  def dlnsigma_dlnr(self,rrange,sigma_r):
-    """ 
-    slope of inverse root matter variance wrt log radius:
-    d(log(1/sigma)) / d(log(r))
+  def dlnsigma_dlnr(self,rrange,z):
+    """ slope of root matter variance wrt log radius:
+        d(log(sigma)) / d(log(r))
     
-    Polynomial fit to supplied cosmology.
-    Returns poly1d object
-    """
+        Polynomial fit to supplied cosmology.
+        Returns poly1d object """
     
-    fit = np.polyfit(log(rrange),log(sigma_r),6)
-    self.p_der = np.polyder(np.poly1d(fit))
+    self.sigma_r(rrange,z)
     
-    #plt.loglog(rrange,sigma_r,log_radius,inv_sigma,log_radius,self.p(log_radius))
-    #plt.legend(["3","1","2"])
-    #plt.show()
+    fit = np.polyfit(log(rrange),log(self.sigmar),6)
+    self.dlnsigmadlnr = np.polyder(np.poly1d(fit))
     
-    return self.p_der
+    return self.dlnsigmadlnr
+    
+  
+  def dlnsigma_dlnm(self,mrange,z):
+    """ slope of root matter variance wrt log mass:
+        d(log(sigma)) / d(log(M))
+    
+        Polynomial fit to supplied cosmology.
+        Returns poly1d object """
+    
+    rho = self.cosm.rho_m(z)
+    
+    # convert mass -> radius to get sigma
+    rrange = ((3*mrange)/(4*pi*rho))**(0.333333333333333333333)
+    self.sigma_r(rrange,z)
+    
+    fit = np.polyfit(log(mrange),log(self.sigmar),6)
+    self.dlnsigmadlnm = np.polyder(np.poly1d(fit))
+    
+    return self.dlnsigmadlnm
   
   
   def sigma_wmap7fit(self, lnm):
