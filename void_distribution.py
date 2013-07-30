@@ -1,5 +1,4 @@
-"""
-Void Distribution Script
+"""Void Distribution Script
 
 Python script for reproducing the
 number density distribution of voids
@@ -25,6 +24,7 @@ def void_and_cloud(void_barrier, collapse_barrier):
   
   Parameters
   ----------
+  
   void_barrier : float
   the critical underdensity; defines a void
   
@@ -33,6 +33,7 @@ def void_and_cloud(void_barrier, collapse_barrier):
   
   Notes
   -----
+  
   Calculates D, the void-and-cloud parameter, which parametrises 
   the impact of halo evolution on the evolving population of voids
   """
@@ -44,6 +45,7 @@ def multiplicity_function_svdw(nu,D,void_barrier,collapse_barrier):
   
   Parameters
   ----------
+  
   nu : array
   scaled void size/mass
   
@@ -57,7 +59,8 @@ def multiplicity_function_svdw(nu,D,void_barrier,collapse_barrier):
   the critical overdensity; boundary at which virialized objects are formed
   
   Notes
-  -----  
+  -----
+  
   calculates equation [4] in Sheth & van de Weygaert
   approximating the infinite series in equation [1]
   """
@@ -72,6 +75,7 @@ def multiplicity_function_jlh(sigma,D,void_barrier,collapse_barrier):
   
   Parameters
   ----------
+  
   sigma : array
   standard deviation of the power spectrum
   
@@ -85,7 +89,8 @@ def multiplicity_function_jlh(sigma,D,void_barrier,collapse_barrier):
   the critical overdensity; boundary at which virialized objects are formed
   
   Notes
-  -----  
+  -----
+  
   calculates equation [8] in Jennings, Li & Hu
   approximating the infinite series in equation [6]
   """ 
@@ -108,6 +113,7 @@ def multiplicity_function_jlh_exact(sigma,D,void_barrier,collapse_barrier):
   
   Parameters
   ----------
+  
   sigma : array
   standard deviation of the power spectrum
   
@@ -121,7 +127,8 @@ def multiplicity_function_jlh_exact(sigma,D,void_barrier,collapse_barrier):
   the critical overdensity; boundary at which virialized objects are formed
   
   Notes
-  -----  
+  -----
+  
   calculates equation [6] in Jennings, Li & Hu; the exact 
   """ 
   x = ((D*sigma)/fabs(void_barrier))
@@ -134,10 +141,11 @@ def multiplicity_function_jlh_exact(sigma,D,void_barrier,collapse_barrier):
   
 
 def scaled_void_distribution(nu,void_barrier=-2.7,collapse_barrier=1.06):
-  """ Scaled distribution of void masses/sizes from Sheth & van de Weyagert (2004 MNRAS 350 517)
+  """Scaled distribution of void masses/sizes from Sheth & van de Weyagert (2004 MNRAS 350 517)
   
   Parameters
   ----------
+  
   nu : array
   scaled void mass/size
   
@@ -149,6 +157,7 @@ def scaled_void_distribution(nu,void_barrier=-2.7,collapse_barrier=1.06):
   
   Notes
   -----
+  
   Calculates nu given in equation [4]; distribution demonstrated in figure(7)  
   """
   
@@ -163,6 +172,7 @@ def void_radii_dist(r,ps,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   
   Parameters
   ----------
+  
   r : array
   void radii
   
@@ -180,6 +190,7 @@ def void_radii_dist(r,ps,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   
   Notes
   -----
+  
   Produces the differential number density of voids 
   wrt to their characteristic radius
   """
@@ -219,6 +230,7 @@ def void_mass_dist(m,ps,cosm,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   
   Parameters
   ----------
+  
   m : array
   void masses
   
@@ -239,6 +251,7 @@ def void_mass_dist(m,ps,cosm,z=0.0,void_barrier=-2.7,collapse_barrier=1.06):
   
   Notes
   -----
+  
   produces the differential number density of voids
   wrt their characteristic mass
   """
@@ -276,6 +289,7 @@ def void_fr(norm,r,ps):
   
   Parameters
   ----------
+  
   norm : float
   normalisation factor
   
@@ -287,6 +301,7 @@ def void_fr(norm,r,ps):
   
   Notes
   -----
+  
   f(r) from Harrison & Coles (2012); pdf of the original void distribution
   """
   
@@ -299,6 +314,7 @@ def void_Fr(norm,r,ps,max_record=True):
   
   Parameters
   ----------
+  
   norm : float
   normalisation factor
   
@@ -313,6 +329,7 @@ def void_Fr(norm,r,ps,max_record=True):
   
   Notes
   -----
+  
   F(r) from Harrison & Coles (2012); known distribution of void radii 
   
   for max_record=True, calculates the cumulative  distribution *upto*
@@ -332,6 +349,7 @@ def void_pdf(r,norm,ps,V,max_record=True):
   
   Parameters
   ----------
+  
   r : array
   void radii
   
@@ -349,6 +367,7 @@ def void_pdf(r,norm,ps,V,max_record=True):
   
   Notes
   -----
+  
   phi(max) from Harrison & Coles (2012); exact extreme value pdf of the
   original void distribution for a given radius
   
@@ -374,6 +393,7 @@ def void_norm(ps):
   
   Notes
   -----
+  
   n_tot from Harrison & Coles (2012)
   normalisation factor; gives the 
   total comoving number density of voids """

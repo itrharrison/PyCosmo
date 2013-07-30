@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 
 from constants import *
 import hmf
-import powspec
+from powspec import PowSpec
 
 class Cosmology:
   
@@ -31,7 +31,9 @@ class Cosmology:
     Default initialisation with WMAP7+BAO+H0 parameters,
     Tinker mass function and fitted P(k).
     """
-        
+    
+    print "Cosmology"
+    
     self.delta_c = dc
     self.h_0=h0
     self.O_m0=om
@@ -48,7 +50,12 @@ class Cosmology:
     self.n_s = ns
     
     self.mf = hmf.Hmf(mf_type=hmf_type)
-    self.pk = powspec.PowSpec(self)#self.h_0,self.O_m0,self.O_de0,self.O_b0,self.n_s)
+    
+    import inspect
+    print inspect.getframeinfo(inspect.currentframe().f_back)[3]
+    #print inspect.stack()
+    
+    self.pk = PowSpec(self)
   
   def display(self):
     """
@@ -264,10 +271,9 @@ class Cosmology:
   
 
 if __name__ == '__main__':
-
-  wmap7 = Cosmology()
+  #wmap7 = Cosmology()
   
   lnm_arr = np.linspace(log(1.e13), log(1.e18), 100)
   
-  plt.loglog(exp(lnm_arr), wmap7.dndlnm(lnm_arr, 0.e0))
+  #plt.loglog(exp(lnm_arr), wmap7.dndlnm(lnm_arr, 0.e0))
   #plt.show()

@@ -4,3 +4,4 @@ def as2deg(arcsecs):
   """Utility function for converting arcseconds to degrees
   """
   return arcsecs / 60.e0
+  

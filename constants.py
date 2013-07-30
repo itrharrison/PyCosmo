@@ -3,6 +3,7 @@ constants (dictionary)
 
 """
 
+
 const = {} # constants dictionary initialiser
 convert = {} # conversion dictionary initialiser
 
