@@ -401,6 +401,13 @@ def void_norm(ps):
   return integrate.quad(void_radii_dist,0.,np.inf,args=(ps))
   
 
+def void_survey_norm(zmin,zmax,ps):
+  
+  integrate.quad()
+  
+  
+  
+  return None
 
 if __name__ == '__main__':
   # initialise radius and mass lists
