@@ -21,34 +21,43 @@ import constants as ct
 
 from matplotlib import pyplot as plt
 
-
 class PowSpec:
 
-  def __init__(self,cosmology):#h0=0.702e0,om=0.274e0,ode=0.725e0,ob=0.0458,ns=0.96):
+  def __init__(self,cosmology):
     """Constructor
-    Default (and currently only available option) to a polynomial fit to
-    WMAP7+BAO+H0 ML  parameter power spectrum from CAMB. """
     
+    
+    Default to a polynomial fit to WMAP7+BAO+H0 ML 
+    parameter power spectrum from CAMB. """
+    
+    print "PowSpec"
+    
+    #initialise cosmology
     self.cosm = cosmology
-    
+
+    #choose power spectrum source
     camb_choice = self.choose()
-    
+
     self.sigma = self.sigma_wmap7fit
     self.dlnsigmadlnm = self.dlnsigmadlnm_wmap7fit
     self.label = "fitted to WMAP7->CAMB"
     self.clfile="wmap7_bao_h0_scalCls.dat"
-    #self.Dz = self.cosm.growth(z=0.0)
     
   
   def choose(self):
-    print " Would you like to import a CAMB matter/power spectrum file? \n \
+    """ Choose between an Eisenstein & HU fitting function or a CAMB power spectrum """
+    print "  \n \
+            ------------------------------------------------------------- \n \
+            Would you like to import a CAMB matter/power spectrum file? \n \
             If not, an analytic spectrum using the prescription of \n \
             Eisenstein & Hu (1999,511) will be used. \n \n \
             If using a CAMB file ensure the cosmological \n \
             parameters used to generate the spectrum are \n \
             identical to those specified within the \n \
             cosmology class. \n \n \
-            If CAMB, enter 'True', else EH \n"
+            ------------------------------------------------------------- \n \
+            If CAMB, enter 'True', else EH \n \
+            ------------------------------------------------------------- \n"
     
     s = raw_input(":")
     
@@ -232,6 +241,7 @@ class PowSpec:
     return -1.47523 + 0.0770898*lnm - 0.0000450156*pow(lnm,3) + (8.23139e-9)*pow(lnm,5)
 
 if __name__ == "__main__":
+  """
   from cosmology import Cosmology
   
   cosm = Cosmology()
@@ -271,6 +281,7 @@ if __name__ == "__main__":
   
   plt.show()
   
+  """
   """
   sigmar = []
   
