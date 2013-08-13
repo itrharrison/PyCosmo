@@ -16,6 +16,7 @@ import numpy as np
 from numpy import sqrt, log, exp, fabs, pi, sin, cos
 from matplotlib import pyplot as plt
 from scipy import integrate
+from scipy.interpolate import interp1d
 
 from powspec import PowSpec
 from cosmology import Cosmology
@@ -495,10 +496,10 @@ class Voids:
 
   cumulative_V_R_vec = np.vectorize(cumulative_V_R)
 
-  def conditional_mf_fp(self,halo_m,void_m,cosm,ps,z=0.0,sigmav=False):
+  def conditional_mf_bond(self,halo_m,void_m,cosm,ps,z=0.0):
     """ Conditional Mass function, Furlanetto & Piran 2008
         equation [5]
-        based on the Press & Schechter mass function
+        based on the Bond et al. prescripton of the Press Schechter mass function
     """
     rho = cosm.rho_m(z)
 
@@ -507,12 +508,25 @@ class Voids:
 
     # void radius for a region with linearized underdensity delta_v
     r = ((void_m*3)/(4*pi*rho*0.2))**(0.333333333333333)
-    #if sigmav is False:
     sigmav = ps.sig_fit(log(r))
 
-    n =  (2/pi)**0.5 * (rho/halo_m**2) * abs(ps.dlnsigmadlnm(log(halo_m))) * (sigma**2) \
+    n =  ((2/pi)**0.5) * (rho/halo_m**2) * abs(ps.dlnsigmadlnm(log(halo_m))) * (sigma**2) \
     * ((self.collapse_barrier-self.void_barrier)/((sigma**2) - (sigmav**2))**1.5) \
     * exp((-1 * (self.collapse_barrier-self.void_barrier)**2)/(2 * ((sigma**2) - (sigmav**2))))
+
+    return n
+
+  def massfunction_ps(self,halo_m,void_m,cosm,ps,z=0.0):
+    """ non-conditional mass function, based on Press & Schechter 1974
+        equation [4] in Furlanetto & Piran
+    """
+    rho = cosm.rho_m(z)
+
+    r = ((halo_m*3)/(4*pi*rho*200))**(0.333333333333333)
+    sigma = ps.sig_fit(log(r))
+
+    n = ((2/pi)**0.5) * (rho/(halo_m**2)) * abs(ps.dlnsigmadlnm(log(halo_m))) \
+        * (self.collapse_barrier/sigma) * exp((-self.collapse_barrier**2)/(2*(sigma**2)))
 
     return n
 
@@ -553,32 +567,84 @@ class Voids:
 
     return Ns + Nc
 
-  def galaxy_no_density(self,void_m,m_min,cosm,ps,z=0.0):
+  def galaxy_no_density(self,void_m,m_min,cosm,ps,z=0.0,conditional=True):
     """ Total comoving number density of galaxies within a given region
         Furlanetto & Piran 2008
     """
 
     def integ(halo_m,void_m,m_min,cosm,ps,z):
-      #print self.hod_kravtsov(halo_m,m_min)
-      #print self.conditional_mf_fp(halo_m,void_m,cosm,ps,z)
-      ng = self.hod_kravtsov(halo_m,m_min) * self.conditional_mf_fp(halo_m,void_m,cosm,ps,z)
-      #print ng
+      if conditional is True:
+        ng = self.hod_kravtsov(halo_m,m_min) * self.conditional_mf_bond(halo_m,void_m,cosm,ps,z)
+      else:
+        ng = self.hod_kravtsov(halo_m,m_min) * self.massfunction_ps(halo_m,void_m,cosm,ps,z)
       return ng
 
     n_gal, error = integrate.quad(integ,m_min,np.inf,args=(void_m,m_min,cosm,ps,z))
 
-    #print n_gal
-
     return n_gal
 
-  def galaxy_underdensity(n_gal,n_halo):
+  def galaxy_underdensity(self,void_m,m_min,cosm,ps,z=0.0):
     """ total observed galaxy underdensity in a void with physical size Rv
     """
-    delta_g = (n_gal/(n_halo * (1.7**3)))-1
+    n_gal = self.galaxy_no_density(void_m,m_min,cosm,ps,z)
+    n_gal_ps = self.galaxy_no_density(void_m,m_min,cosm,ps,z,conditional=False)
+
+    delta_g = (n_gal/(n_gal_ps * (1.7**3)))-1
     return delta_g
+
+  def galaxy_ud_fit(self,delta_g,delta_v):
+    """ Calculates a fit to the galaxy underdensity / void underdensity relationship
+    """
+    # fit a polynomial to the given data
+    fit = np.polyfit(delta_v,delta_g,4)
+    # differentiate and solve to find maximum along delta_v
+    dv = np.polyder(np.poly1d(fit))
+    max_fit = np.roots(dv)
+
+    # find the maximum within the specified range
+    for x in max_fit:
+      if min(delta_v) < x < max(delta_v):
+        max_fit = x
+        max_index = (np.abs(delta_v-max_fit)).argmin()
+        break
+
+    dv_new = []
+    dg_new = []
+    #reduce original arrays between 0 and maximum
+    for i,x in enumerate(delta_v):
+      if i > max_index: dv_new.append(x)
+    for i,x in enumerate(delta_g):
+      if i > max_index: dg_new.append(x)
+
+    #fit to function within range (avoids multiple solutions)
+    self.delta_g_fit = np.poly1d(np.polyfit(dg_new,dv_new,10))
+
+    return self.delta_g_fit
+
+  def halo_underdensity(self,halo_m,void_m,cosm,ps,z=0.0):
+    """ Halo underdensity at mass m
+    """
+    n_halo = self.conditional_mf_bond(halo_m,void_m,cosm,ps,z)
+    n_halo_ps = self.massfunction_ps(halo_m,void_m,cosm,ps,z)
+
+    delta_h = (n_halo/(n_halo_ps*(1.7**3)))-1
+    return delta_h
+
+  def halo_ud_fit(self,delta_h,delta_v):
+    """ Calculates a fit to the halo underdensity / void underdensity relationship
+    """
+    fit = np.polyfit(delta_h,delta_v,6)
+    dv = np.poly1d(fit)
+
+    self.delta_h_fit = np.poly1d(np.roots(fit))
+    print self.delta_h_fit
+    return self.delta_h_fit
+
+
 
 def dump_pickle(cosm):
   pickle.dump(cosm,open("wmap7.p","wb"))
+  return True
 
 def load_pickle():
   f = open("void_init.p","rb")
@@ -606,18 +672,64 @@ if __name__ == '__main__':
   #no_radius = vd.void_radii_dist(radius,cosm.pk)
   #plt.loglog(radius,no_radius)
 
-  no_mass = []
-  no_mass2 = []
 
-  #for m in mass:
+  """
+
+  delta_g = []
+  delta_h = []
+  delta_v = np.arange(-6.0,4.0,0.01)
+  for dv in delta_v:
+    vd.void_barrier = dv
+    #delta_h.append(vd.halo_underdensity(10**11,10**14,cosm,cosm.pk))
+    delta_g.append(vd.galaxy_underdensity(2 * 10**11,10**10,cosm,cosm.pk))
+
+  vd.galaxy_ud_fit(delta_g,delta_v)
+  #vd.halo_ud_fit(delta_h,delta_v)
+
+  #plt.plot(delta_h,vd.delta_h_fit(delta_h),delta_h,delta_v)
+  plt.plot(delta_g,vd.delta_g_fit(delta_g),delta_g,delta_v)
+  #plt.plot(dg_new,vd.delta_g_fit(dg_new),dg_new,dv_new)
+
+  plt.legend(["fit","real"])
+  plt.ylabel(r"$\delta^{L}_{v}$")
+  plt.xlabel("$\delta_{g}$")
+  plt.show()
+
+  vd.void_barrier = -2.7
+
+  """
+
+  """
+  no_dens = []
+  vd.delta_g_fit(-0.8)
+  no_dens.append(vd.void_radii_dist(radius,cosm.pk))
+
+
+  plt.loglog(radius,no_dens)
+  plt.show()
+  """
+
+  """
+  no_mass = []
+  for m in mass:
     #no_mass.append(
-    #print (vd.conditional_mf_fp(m,10**15,cosm,cosm.pk))
+    #print (vd.conditional_mf_bond(m,10**15,cosm,cosm.pk))
     #vd.void_barrier = 0.00
-    #no_mass2.append(vd.conditional_mf_fp(m,0.,cosm,cosm.pk,sigmav=0.))
+    #no_mass2.append(vd.conditional_mf_bond(m,0.,cosm,cosm.pk,sigmav=0.))
     #no_mass.append(
     #print (vd.hod_kravtsov(m,10**10))
-    #no_mass.append(vd.galaxy_no_density(m,10**11,cosm,cosm.pk))
+    V = m / cosm.rho_m(0.0)
+    no_mass.append(V * vd.galaxy_no_density(m,10**11,cosm,cosm.pk))
 
+  plt.loglog(mass,no_mass)
+  plt.title("Cumulative Galaxy no against resident Void Mass")
+  plt.xlabel(r"Galaxy No.")
+  plt.ylabel(r"Void Mass M_{0}")
+  #plt.yscale((10**-12),1.)
+  plt.show()
+  """
+
+  """
   halo_mass = np.logspace(7,17.5,700)
   halo_mass.tolist()
 
@@ -629,10 +741,10 @@ if __name__ == '__main__':
   ax1 = fig.add_subplot(111)
 
   for m in halo_mass:
-    gal_nd.append(vd.hod_kravtsov(m,10**10) * vd.conditional_mf_fp(m,10**16,cosm,cosm.pk))
-    gal_nd2.append(vd.hod_kravtsov(m,10**10) * vd.conditional_mf_fp(m,10**15,cosm,cosm.pk))
-    gal_nd3.append(vd.hod_kravtsov(m,10**10) * vd.conditional_mf_fp(m,10**14,cosm,cosm.pk))
-    gal_nd4.append(vd.hod_kravtsov(m,10**10) * vd.conditional_mf_fp(m,10**13,cosm,cosm.pk))
+    gal_nd.append(vd.conditional_mf_bond(m,10**16,cosm,cosm.pk))
+    gal_nd2.append(vd.conditional_mf_bond(m,10**15,cosm,cosm.pk))
+    gal_nd3.append(vd.conditional_mf_bond(m,10**14,cosm,cosm.pk))
+    gal_nd4.append(vd.conditional_mf_bond(m,10**13,cosm,cosm.pk))
 
   #no_mass = vd.galaxy_no_density(10**16,10**10,cosm,cosm.pk)
 
@@ -649,6 +761,7 @@ if __name__ == '__main__':
   plt.ylabel("Galaxy No. Density")
   #plt.yscale((10**-12),1.)
   plt.show()
+  """
 
   """
   #plot
