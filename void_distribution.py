@@ -751,7 +751,7 @@ if __name__ == '__main__':
   cosm.pk.Dz, cosm.pk.sigmar, cosm.pk.sig_fit, cosm.pk.dlnsigmadlnr, cosm.pk.dlnsigmadlnm = load_pickle()
 
   # set non-gaussianity as non-zero
-  cosm.fnl = 100.
+  cosm.fnl = -200.
 
   m_radius = ( (3. * mass) / (4. * pi * cosm.rho_m(0.)) )**(0.33333333333)
   r_mass = (4*pi*cosm.rho_m(0.)*radius**3)/3.
@@ -761,17 +761,27 @@ if __name__ == '__main__':
   for r in radius:
     s3.append(vd.skewness_S3(r,cosm,cosm.pk))
 
-  plt.loglog(radius,s3)
-  plt.show()
-  raw_input()
+  #plt.loglog(radius,s3)
+  #plt.show()
+  #raw_input()
 
   vd.ds3dm(r_mass,s3)
 
   n = vd.void_radii_dist_ps(radius,cosm.pk)
   n_NG = vd.void_radii_dist_ps_ng(radius,s3,cosm.pk)
 
+  plt.title("f_nl = -200")
   plt.loglog(radius,n,radius,n_NG)
   plt.legend(["Gaussian","NG"])
+  plt.xlabel("R")
+  plt.ylabel("n")
+  plt.show()
+
+  raw_input()
+
+  plt.semilogx(radius,n_NG/n,)
+  plt.xlabel("R")
+  plt.ylabel("ratio")
   plt.show()
 
   """
