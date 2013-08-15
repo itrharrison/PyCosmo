@@ -192,7 +192,7 @@ class Voids:
     return self.multiplicity_function_jlh_vec(nu,D)
 
 
-  def void_radii_dist(self,r,ps):
+  def void_radii_dist(self,r,ps,f,f_vec):
     """ Number density wrt void radii, Jennings, Li & Hu (2013 MNRAS 000 1)
 
     Parameters
@@ -204,6 +204,9 @@ class Voids:
     ps : object
     PowSpec class instance
 
+    f : function
+    Multiplicity function
+
     z : float
     redshift
 
@@ -214,6 +217,10 @@ class Voids:
     wrt to their characteristic radius.
     equation [12], Jennings, Li & Hu
     """
+
+    multiplicity_function = f
+    multiplicity_function_vec = f_vec
+
     # account for expansion factor (eq.12, Jennings,Li & Hu)
     r = (r / 1.7)
 
@@ -231,16 +238,16 @@ class Voids:
 
     # calculate f(sigma)
     if(np.isscalar(sigma)):
-      fSig = self.multiplicity_function_pls(sigma)
+      fSig = self.multiplicity_function(sigma)
     else:
-      fSig = self.multiplicity_function_pls_vec(self,sigma)
+      fSig = self.multiplicity_function_vec(self,sigma)
 
     no_dens = (fSig/V) * dlns_dlnr
 
     return no_dens
 
 
-  def void_radii_dist_linear(self,r,ps):
+  def void_radii_dist_linear(self,r,ps,f,f_vec):
     """ Number density wrt void radii in the
         linear domain, Jennings, Li & Hu (2013 MNRAS 000 1)
 
@@ -263,6 +270,10 @@ class Voids:
     wrt to their characteristic radius in the liear domain
     (equation [10] Jennings,Li & Hu)
     """
+
+    multiplicity_function = f
+    multiplicity_function_vec = f_vec
+
     # D ; the void-and-cloud parameter
     D = self.void_and_cloud()
 
@@ -277,18 +288,21 @@ class Voids:
 
     # calculate f(sigma)
     if(np.isscalar(sigma)):
-      fSig = self.multiplicity_function_jlh(sigma,D)
+      fSig = self.multiplicity_function(sigma,D)
     else:
-      fSig = self.multiplicity_function_jlh_vec(self,sigma,D)
+      fSig = self.multiplicity_function_vec(self,sigma,D)
 
     no_dens = (fSig/V) * dlns_dlnr
 
     return no_dens
 
 
-  def void_radii_dist_vdn(self,r,ps):
+  def void_radii_dist_vdn(self,r,ps,f,f_vec):
     """ Volume conserving model for void radii
     relative abundances, Jennings, Li & Hu 2013 """
+
+    multiplicity_function = f
+    multiplicity_function_vec = f_vec
 
     # D ; the void-and-cloud parameter
     D = self.void_and_cloud()
@@ -304,14 +318,93 @@ class Voids:
 
     # calculate f(sigma)
     if(np.isscalar(sigma)):
-      fSig = self.multiplicity_function_jlh(sigma,D)
+      fSig = self.multiplicity_function(sigma,D)
     else:
-      fSig = self.multiplicity_function_jlh_vec(self,sigma,D)
+      fSig = self.multiplicity_function_vec(self,sigma,D)
 
     no_dens = (fSig/V) * dlns_dlnr
 
     return no_dens
 
+  def void_radii_dist_ps(self,r,ps):
+    """ void abundance wrt radius from press schechter formalism
+        (as defined in Kamionkowski, Verde & Jimenez (2008), equation [4])
+    """
+    rho = cosm.rho_m(0.0)
+
+    m = (4 * pi * rho * r**3)/3
+
+    sigma = ps.sig_fit(log(r))
+
+    dlns_dlnm = fabs(ps.dlnsigmadlnm(log(m)))
+
+    n = (9/(2*pi**2)) * ((pi/2)**0.5) * (1/r**4) * (abs(self.void_barrier)/sigma) \
+     * abs(dlns_dlnm) * exp(-1*(self.void_barrier**2/(2*sigma**2)))
+
+    return n
+
+  def void_radii_dist_ps_ng(self,r,S3,ps):
+    """ void abundance wrt radius from press schechter formalism with Non-Gaussian IC's
+        (as defined in Kamionkowski, Verde & Jimenez (2008), equation [6])
+    """
+
+    rho = cosm.rho_m(0.0)
+
+    m = (4 * pi * rho * r**3)/3
+
+    # differential skewness wrt mass
+    dS3dm = self.ds3_dm_fit(m)
+
+    sigma = ps.sig_fit(log(r))
+
+    dlns_dlnm = fabs(ps.dlnsigmadlnm(log(m)))
+
+    a = (9/(2*pi**2)) * ((pi/2)**0.5) * (1/r**4) * exp(-1*(self.void_barrier**2/(2*sigma**2)))
+    b = (abs(self.void_barrier)/sigma) - ((S3*sigma)/6)*( ((self.void_barrier/sigma)**4) \
+    - 2*((self.void_barrier/sigma)**2) - 1 )
+    c = (1/6)*dS3dm*sigma*(((self.void_barrier/sigma)**2)-1)
+
+    n = a * ( (dlns_dlnm*b) + c )
+
+    return n
+
+  def skewness_S3(self,r,cosm,ps,z=0.0):
+    """ Skewness parameter S3 from Enqvist, Hotchkiss & Taanila (2010)
+        Equations [2.7] stated below; confusion as to  the cosmology
+        dependence of this form, since sigma_8 is stated
+    """
+    #P = ps.power_spectrum_P(1/r,z)
+    sigma = ps.sig_fit(log(r))
+    #s3 = (6 * cosm.fnl * (P**0.5)) / sigma
+    s3 = (3. * 10**-4) * cosm.fnl / sigma
+
+    return s3
+
+  skewness_S3_vec = np.vectorize(skewness_S3)
+
+
+  def ds3dm(self,m,s3):
+    """ slope of skewness wrt mass scale
+        dS3/dM
+    """
+    fit = np.poly1d(np.polyfit(m,s3,10))
+    self.ds3_dm_fit = np.polyder(fit)
+
+    return self.ds3_dm_fit
+
+  def cumulative_V_R(self,r,ps,func):
+    """ cumulative fration of volume contained within voids
+    from Jennigs, Li & Hu, 2013 """
+
+    def cumulative_int(r,ps,func):
+      # integral function argument
+      n = func(r,ps)
+      V = (4 * pi * r**3) / 3
+      return n * V * (1/r)
+
+    return integrate.quad(cumulative_int,r,np.inf,args=(ps,func))
+
+  cumulative_V_R_vec = np.vectorize(cumulative_V_R)
 
   def void_mass_dist(self,m,ps,cosm,z=0.0):
     """ Number density wrt void mass, Jennings, Li & Hu (2013 MNRAS 000 1)
@@ -389,7 +482,6 @@ class Voids:
     num = self.void_radii_dist(r,ps)
     return (1/norm)*num*(1/r)
 
-
   def void_Fr(self,norm,r,ps,max_record):
     """ Cumulative void distribution
 
@@ -423,7 +515,6 @@ class Voids:
       integ = integrate.quad(self.void_radii_dist,r,np.inf,args=(ps))
 
     return (1/norm)*integ[0]
-
 
   def void_pdf(self,r,norm,ps,V,max_record=True):
     """ Void probability density function (pdf)
@@ -462,7 +553,6 @@ class Voids:
 
     return N * fr * Fr**(N-1)
 
-
   def void_norm(self,ps):
     """ Void Normalisation factor
 
@@ -480,21 +570,6 @@ class Voids:
     total comoving number density of voids """
 
     return integrate.quad(self.void_radii_dist,0.,np.inf,args=(ps))
-
-
-  def cumulative_V_R(self,r,ps,func):
-    """ cumulative fration of volume contained within voids
-    from Jennigs, Li & Hu, 2013 """
-
-    def cumulative_int(r,ps,func):
-      # integral function argument
-      n = func(r,ps)
-      V = (4 * pi * r**3) / 3
-      return n * V * (1/r)
-
-    return integrate.quad(cumulative_int,r,np.inf,args=(ps,func))
-
-  cumulative_V_R_vec = np.vectorize(cumulative_V_R)
 
   def conditional_mf_bond(self,halo_m,void_m,cosm,ps,z=0.0):
     """ Conditional Mass function, Furlanetto & Piran 2008
@@ -641,9 +716,18 @@ class Voids:
     return self.delta_h_fit
 
 
+def initialisation(radius,mass,cosm,z=0.0):
+  cosm.pk.vd_initialisation(radius,mass,z)
+  #m_radius = ( (3 * mass) / (4 * pi * cosm.rho_m(z)) )**(0.33333333333)
+  #vd.ds3dm(mass,skewness_S3(m_radius,ps,z))
+
+  dump_pickle(cosm)
+  return True
 
 def dump_pickle(cosm):
-  pickle.dump(cosm,open("wmap7.p","wb"))
+  f = open("void_init.p","wb")
+  pickle.dump([cosm.pk.Dz,cosm.pk.sigmar,cosm.pk.sig_fit,cosm.pk.dlnsigmadlnr,cosm.pk.dlnsigmadlnm],f)
+  f.close()
   return True
 
 def load_pickle():
@@ -651,7 +735,6 @@ def load_pickle():
   Dz, sigmar, sig_fit, dlnsigmadlnr, dlnsigmadlnm= pickle.load(f)
   f.close()
   return Dz, sigmar, sig_fit, dlnsigmadlnr, dlnsigmadlnm
-
 
 if __name__ == '__main__':
   cosm = Cosmology()
@@ -662,16 +745,34 @@ if __name__ == '__main__':
   radius.tolist()
   mass.tolist()
 
-  fig = plt.figure()
-
-  #cosm.pk.vd_initialisation(0.0,radius,mass)
+  #initialisation(radius,mass,cosm,z=0.)
 
   # load pickled void parameters from powspec class
   cosm.pk.Dz, cosm.pk.sigmar, cosm.pk.sig_fit, cosm.pk.dlnsigmadlnr, cosm.pk.dlnsigmadlnm = load_pickle()
 
-  #no_radius = vd.void_radii_dist(radius,cosm.pk)
-  #plt.loglog(radius,no_radius)
+  # set non-gaussianity as non-zero
+  cosm.fnl = 100.
 
+  m_radius = ( (3. * mass) / (4. * pi * cosm.rho_m(0.)) )**(0.33333333333)
+  r_mass = (4*pi*cosm.rho_m(0.)*radius**3)/3.
+
+  # calculate the skewness for given set of radii
+  s3 = []
+  for r in radius:
+    s3.append(vd.skewness_S3(r,cosm,cosm.pk))
+
+  plt.loglog(radius,s3)
+  plt.show()
+  raw_input()
+
+  vd.ds3dm(r_mass,s3)
+
+  n = vd.void_radii_dist_ps(radius,cosm.pk)
+  n_NG = vd.void_radii_dist_ps_ng(radius,s3,cosm.pk)
+
+  plt.loglog(radius,n,radius,n_NG)
+  plt.legend(["Gaussian","NG"])
+  plt.show()
 
   """
 

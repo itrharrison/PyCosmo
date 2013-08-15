@@ -74,7 +74,7 @@ class PowSpec:
     print("Power spectrum {}".format(self.label))
 
 
-  def vd_initialisation(self,z,rrange,mrange):
+  def vd_initialisation(self,rrange,mrange,z=0.0):
     """ initialise parameters required for
         void_distribution.py script """
 
@@ -83,11 +83,6 @@ class PowSpec:
     self.sigma_fit(rrange,self.sigmar)
     self.dlnsigma_dlnr(rrange,z)
     self.dlnsigma_dlnm(mrange,z)
-
-    f = open("void_init.p","wb")
-    pickle.dump([self.Dz,self.sigmar,self.sig_fit,self.dlnsigmadlnr,self.dlnsigmadlnm],f)
-
-    f.close()
 
     return None
 
@@ -130,8 +125,9 @@ class PowSpec:
                         0.0,0,self.cosm.O_de0,self.cosm.h_0,z)
 
     """Call to EH power.c script
-       h Mpc^-1 OR Mpc^-1 ???? """
+       ???? h Mpc^-1 OR Mpc^-1 ???? """
     #return power.TFmdm_onek_mpc(k)
+
     return power.TFmdm_onek_hmpc(k)
 
 
@@ -248,6 +244,19 @@ class PowSpec:
     return -1.47523 + 0.0770898*lnm - 0.0000450156*pow(lnm,3) + (8.23139e-9)*pow(lnm,5)
 
 if __name__ == "__main__":
+  from cosmology import Cosmology
+
+  cosm = Cosmology()
+  ps = PowSpec(cosm)
+
+  radius=np.logspace(-1,2,500)
+  radius.tolist()
+
+  sigma = ps.sigma_r(radius,0.)
+  ps.sigma_fit(radius,sigma)
+
+  plt.plot(radius,sigma,radius,ps.sig_fit(radius))
+
   """
   from cosmology import Cosmology
 
