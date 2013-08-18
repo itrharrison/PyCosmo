@@ -119,6 +119,20 @@ class Hmf:
   
     return sqrt(2.e0/pi) * (delta_c/sigma) * exp( (-delta_c*delta_c)/(2.e0*sigma*sigma) )
     
+  def r_lmsv(self, sigma, delta_c, f_nl):
+    """LMSV non-Gaussian correction facotr from 0903.1251 eqn (10),
+    Edgeworth expansion
+    """
+    
+    S_3 = 3.e-4*f_nl/sigma
+    dS_3dlns = -S_3
+    
+    return 1.e0 + (sigma*sigma/(6.e0*delta_c))*(S_3*(delta_c**4/sigma**4 - 
+                                                     2.e0*delta_c**2/sigma**2
+                                                     -1.e0) +
+                                                dS_3dlns*(delta_c**2/sigma**2 -
+                                                          1.e0))
+    
   def r_pgh(self, sigma, delta_c, f_nl):
     """Paranjape-Gordon-Hotchkiss non-Gaussian correction factor for
     halo mass functions.
