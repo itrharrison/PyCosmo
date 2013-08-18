@@ -13,7 +13,7 @@ from numpy import sqrt, log, exp, fabs, pi
 
 class Hmf:
   
-  def __init__(self, mf_type='tinker', rng_type='pgh'):
+  def __init__(self, mf_type='tinker', rng_type='lmsv'):
     if (mf_type=='tinker'):
       self.label = "Tinker (evolving)"
       self.params=[0.186e0, 1.47e0, 2.57e0, 1.19e0]
@@ -35,10 +35,13 @@ class Hmf:
       
     if (rng_type=='pgh'):
       self.r_ng = self.r_pgh
+    elif (rng_type=='lmsv'):
+      self.r_ng = self.r_lmsv
     else:
       raise Exception(
       'ERROR: Unkown R_nG \'{}\' used, please choose from:\n'
-      '- Paranjape-Gordon-Hotchkiss (\'pgh\')'.format(rng_type))
+      '- Paranjape-Gordon-Hotchkiss (\'pgh\')'
+      '- LMSV (\'lmsv\')'.format(rng_type))
       
   
   def display(self):
