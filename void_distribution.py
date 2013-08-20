@@ -82,6 +82,8 @@ class Voids:
     / (fabs(self.collapse_barrier)*nu*4)) - (2*(D**4)/(nu**2)))
 
 
+  multiplicity_function_svdw_vec = np.vectorize(multiplicity_function_svdw)
+
   def multiplicity_function_jlh(self,sigma,D):
     """Multiplicity function approximation defined
        in Jennings, Li & Hu (2013 MNRAS 000 1)
@@ -192,7 +194,7 @@ class Voids:
     return self.multiplicity_function_jlh_vec(nu,D)
 
 
-  def void_radii_dist(self,r,ps,f,f_vec):
+  def void_radii_dist(self,r,ps):
     """ Number density wrt void radii, Jennings, Li & Hu (2013 MNRAS 000 1)
 
     Parameters
@@ -218,9 +220,6 @@ class Voids:
     equation [12], Jennings, Li & Hu
     """
 
-    multiplicity_function = f
-    multiplicity_function_vec = f_vec
-
     # account for expansion factor (eq.12, Jennings,Li & Hu)
     r = (r / 1.7)
 
@@ -238,16 +237,16 @@ class Voids:
 
     # calculate f(sigma)
     if(np.isscalar(sigma)):
-      fSig = self.multiplicity_function(sigma)
+      fSig = self.multiplicity_function_jlh(sigma,D)
     else:
-      fSig = self.multiplicity_function_vec(self,sigma)
+      fSig = self.multiplicity_function_jlh_vec(self,sigma,D)
 
     no_dens = (fSig/V) * dlns_dlnr
 
     return no_dens
 
 
-  def void_radii_dist_linear(self,r,ps,f,f_vec):
+  def void_radii_dist_linear(self,r,ps):
     """ Number density wrt void radii in the
         linear domain, Jennings, Li & Hu (2013 MNRAS 000 1)
 
@@ -267,12 +266,9 @@ class Voids:
     -----
 
     Produces the differential number density of voids
-    wrt to their characteristic radius in the liear domain
+    wrt to their characteristic radius in the linear domain
     (equation [10] Jennings,Li & Hu)
     """
-
-    multiplicity_function = f
-    multiplicity_function_vec = f_vec
 
     # D ; the void-and-cloud parameter
     D = self.void_and_cloud()
@@ -288,9 +284,9 @@ class Voids:
 
     # calculate f(sigma)
     if(np.isscalar(sigma)):
-      fSig = self.multiplicity_function(sigma,D)
+      fSig = self.multiplicity_function_jlh(self,sigma,D)
     else:
-      fSig = self.multiplicity_function_vec(self,sigma,D)
+      fSig = self.multiplicity_function_jlh_vec(sigma,D)
 
     no_dens = (fSig/V) * dlns_dlnr
 
@@ -381,7 +377,6 @@ class Voids:
     return s3
 
   skewness_S3_vec = np.vectorize(skewness_S3)
-
 
   def ds3dm(self,m,s3):
     """ slope of skewness wrt mass scale
@@ -479,6 +474,8 @@ class Voids:
     f(r) from Harrison & Coles (2012); pdf of the original void distribution
     """
 
+    D = self.void_and_cloud()
+
     num = self.void_radii_dist(r,ps)
     return (1/norm)*num*(1/r)
 
@@ -508,6 +505,8 @@ class Voids:
     for max_record=True, calculates the cumulative  distribution *upto*
     a given radii, otherwise calculates EVS for small radii
     """
+
+    D = self.void_and_cloud()
 
     if max_record:
       integ = integrate.quad(self.void_radii_dist,0.,r,args=(ps))
@@ -547,6 +546,8 @@ class Voids:
     ue provided there
     """
 
+    D = self.void_and_cloud()
+
     fr = self.void_fr(norm,r,ps)
     Fr = self.void_Fr(norm,r,ps,max_record)
     N = norm * V
@@ -569,6 +570,8 @@ class Voids:
     normalisation factor; gives the
     total comoving number density of voids """
 
+    D = self.void_and_cloud()
+
     return integrate.quad(self.void_radii_dist,0.,np.inf,args=(ps))
 
   def conditional_mf_bond(self,halo_m,void_m,cosm,ps,z=0.0):
@@ -578,7 +581,7 @@ class Voids:
     """
     rho = cosm.rho_m(z)
 
-    r = ((halo_m*3)/(4*pi*rho*200))**(0.333333333333333)
+    r = ((halo_m*3)/(4*pi*rho))**(0.333333333333333)
     sigma = ps.sig_fit(log(r))
 
     # void radius for a region with linearized underdensity delta_v
@@ -597,7 +600,7 @@ class Voids:
     """
     rho = cosm.rho_m(z)
 
-    r = ((halo_m*3)/(4*pi*rho*200))**(0.333333333333333)
+    r = ((halo_m*3)/(4*pi*rho))**(0.333333333333333)
     sigma = ps.sig_fit(log(r))
 
     n = ((2/pi)**0.5) * (rho/(halo_m**2)) * abs(ps.dlnsigmadlnm(log(halo_m))) \
@@ -634,7 +637,7 @@ class Voids:
     C = 30
     beta = 1
 
-    #satellite galaxies
+    # satellite galaxy occupation number
     Ns = (halo_m / (C * m_min))**beta
 
     # central galaxy occupation number
@@ -644,22 +647,23 @@ class Voids:
 
   def galaxy_no_density(self,void_m,m_min,cosm,ps,z=0.0,conditional=True):
     """ Total comoving number density of galaxies within a given region
-        Furlanetto & Piran 2008
+        Furlanetto & Piran 2008, equation [7]
     """
 
-    def integ(halo_m,void_m,m_min,cosm,ps,z):
+    def integ(halo_m,void_m,m_min,cosm,ps,z,conditional):
       if conditional is True:
         ng = self.hod_kravtsov(halo_m,m_min) * self.conditional_mf_bond(halo_m,void_m,cosm,ps,z)
       else:
         ng = self.hod_kravtsov(halo_m,m_min) * self.massfunction_ps(halo_m,void_m,cosm,ps,z)
       return ng
 
-    n_gal, error = integrate.quad(integ,m_min,np.inf,args=(void_m,m_min,cosm,ps,z))
+    n_gal, error = integrate.quad(integ,m_min,np.inf,args=(void_m,m_min,cosm,ps,z,conditional))
 
     return n_gal
 
   def galaxy_underdensity(self,void_m,m_min,cosm,ps,z=0.0):
     """ total observed galaxy underdensity in a void with physical size Rv
+        Furlanetto & Piran 2008, equation [8]
     """
     n_gal = self.galaxy_no_density(void_m,m_min,cosm,ps,z)
     n_gal_ps = self.galaxy_no_density(void_m,m_min,cosm,ps,z,conditional=False)
@@ -676,6 +680,8 @@ class Voids:
     dv = np.polyder(np.poly1d(fit))
     max_fit = np.roots(dv)
 
+    print "max_fit: %s" % max_fit
+
     # find the maximum within the specified range
     for x in max_fit:
       if min(delta_v) < x < max(delta_v):
@@ -687,9 +693,9 @@ class Voids:
     dg_new = []
     #reduce original arrays between 0 and maximum
     for i,x in enumerate(delta_v):
-      if i > max_index: dv_new.append(x)
+      if i < max_index: dv_new.append(x)
     for i,x in enumerate(delta_g):
-      if i > max_index: dg_new.append(x)
+      if i < max_index: dg_new.append(x)
 
     #fit to function within range (avoids multiple solutions)
     self.delta_g_fit = np.poly1d(np.polyfit(dg_new,dv_new,10))
@@ -750,6 +756,8 @@ if __name__ == '__main__':
   # load pickled void parameters from powspec class
   cosm.pk.Dz, cosm.pk.sigmar, cosm.pk.sig_fit, cosm.pk.dlnsigmadlnr, cosm.pk.dlnsigmadlnm = load_pickle()
 
+  """
+  #Implementation of Non-Gaussian methods
   # set non-gaussianity as non-zero
   cosm.fnl = -200.
 
@@ -783,19 +791,27 @@ if __name__ == '__main__':
   plt.xlabel("R")
   plt.ylabel("ratio")
   plt.show()
+  """
 
   """
+  M_void = 10**14
+  m_min = 2.5 * 10**11
 
   delta_g = []
   delta_h = []
-  delta_v = np.arange(-6.0,4.0,0.01)
+  delta_v = np.arange(-6.0,0.0,0.01)
   for dv in delta_v:
     vd.void_barrier = dv
     #delta_h.append(vd.halo_underdensity(10**11,10**14,cosm,cosm.pk))
-    delta_g.append(vd.galaxy_underdensity(2 * 10**11,10**10,cosm,cosm.pk))
+    delta_g.append(vd.galaxy_underdensity(M_void,m_min,cosm,cosm.pk))
+
+  r = ((3*M_void)/(4*pi*cosm.rho_m(0.0)))**(0.3333333333333)
+  sigma_2 = (cosm.pk.sig_fit(log(r)))**2
 
   vd.galaxy_ud_fit(delta_g,delta_v)
   #vd.halo_ud_fit(delta_h,delta_v)
+
+  print "delta_v : %s || sigma_2 : %s" % (vd.delta_g_fit(-0.8), sigma_2)
 
   #plt.plot(delta_h,vd.delta_h_fit(delta_h),delta_h,delta_v)
   plt.plot(delta_g,vd.delta_g_fit(delta_g),delta_g,delta_v)
@@ -897,9 +913,9 @@ if __name__ == '__main__':
   plt.show()
 
   """
-  """
+
   # calculate the number density of voids wrt radius
-  no_radius = void_radii_dist(radius,cosm.pk)
+  no_radius = vd.void_radii_dist(radius,cosm.pk)
   #no_radius2 = void_radii_dist(radius,cosm.pk.sigmar,cosm.pk,collapse_barrier=1.686)
 
   # calculate the number density of voids wrt mass
@@ -911,27 +927,29 @@ if __name__ == '__main__':
 
   pdf_large = []
   pdf_small = []
-  norm = void_norm(cosm.pk)
+  norm = vd.void_norm(cosm.pk)
 
   for r in radius:
-    pdf_large.append(void_pdf(r,norm[0],cosm.pk,1000000.))
-    pdf_small.append(void_pdf(r,norm[0],cosm.pk,1000000.,max_record=False))
+    pdf_large.append(vd.void_pdf(r,norm[0],cosm.pk,1000000.))
+    pdf_small.append(vd.void_pdf(r,norm[0],cosm.pk,1000000.,max_record=False))
 
   plt.xlim([3e-1,3e1])
   plt.ylim([1e-7,1e-0])
   plt.loglog(radius,pdf_large,radius,pdf_small)
   plt.show()
 
+
   """
-  """
-  ps = PowSpec()
+  #ps = PowSpec()
 
   nod = []
   nod2 = []
 
+  nu_range = np.arange(0.1,20,0.1)
+
   for R in nu_range:
-    nod.append(void_radii_distribution(R,void_barrier=-2.7,ps=ps))
-    nod2.append(void_radii_distribution(R,collapse_barrier=1.686,void_barrier=-2.7,ps=ps))
+    nod.append(vd.void_radii_dist(R,void_barrier=-2.7,cosm.pk))
+    nod2.append(vd.void_radii_dist(R,collapse_barrier=1.686,void_barrier=-2.7,cosm.pk))
 
   plt.plot(nu_range,nod,nu_range,nod2)
 
